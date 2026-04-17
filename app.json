@@ -36,7 +36,8 @@
     "plugins": [
       "expo-camera",
       "expo-location",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-document-picker"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

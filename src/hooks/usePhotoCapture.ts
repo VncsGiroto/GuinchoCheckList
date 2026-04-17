@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImageManipulator from "expo-image-manipulator";
 import { useCameraPermissions } from "expo-camera";
+import { CHECKLIST_PHOTOS_DIRECTORY_NAME } from "../constants/storage";
 
-const PHOTO_DIRECTORY = `${FileSystem.documentDirectory}checklist-photos`;
+const PHOTO_DIRECTORY = `${FileSystem.documentDirectory}${CHECKLIST_PHOTOS_DIRECTORY_NAME}`;
 const MAX_WIDTH = 1200;
 const COMPRESS_QUALITY = 0.8;
 

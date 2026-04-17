@@ -10,6 +10,7 @@ import { ChecklistCreateScreen } from "./src/screens/ChecklistCreateScreen";
 import { ChecklistDetailsScreen } from "./src/screens/ChecklistDetailsScreen";
 import { exportAndShareBackupZipAsync } from "./src/services/backup/exportBackupZip";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { importBackupZipAsync } from "./src/services/backup/importBackupZip";
 
 type AppView = "home" | "create" | "details";
 
@@ -107,6 +108,20 @@ export default function App() {
     }
   }, [checklists]);
 
+  const handleImportBackupAsync = useCallback(async () => {
+    try {
+      const result = await importBackupZipAsync();
+      await loadChecklistsAsync();
+      setCurrentView("home");
+      Alert.alert(
+        "Backup importado",
+        `Banco: ${result.restoredDatabase ? "restaurado" : "nao encontrado"}\nFotos restauradas: ${result.restoredPhotosCount}`,
+      );
+    } catch (error) {
+      Alert.alert("Erro ao importar backup", (error as Error).message);
+    }
+  }, [loadChecklistsAsync]);
+
   return (
     <SafeAreaProvider>
       <SafeAreaView edges={["top", "right", "left"]} style={styles.container}>
@@ -116,6 +131,7 @@ export default function App() {
             checklists={checklists}
             onCreatePress={() => setCurrentView("create")}
             onExportBackupPress={() => void handleExportBackupAsync()}
+            onImportBackupPress={() => void handleImportBackupAsync()}
             onOpenChecklist={(checklistId) => {
               setSelectedChecklistId(checklistId);
               setCurrentView("details");

@@ -8,6 +8,7 @@ interface HomeScreenProps {
   checklists: ChecklistRecord[];
   onCreatePress: () => void;
   onExportBackupPress: () => void;
+  onImportBackupPress: () => void;
   onOpenChecklist: (checklistId: string) => void;
 }
 
@@ -17,7 +18,13 @@ const translateStatus = (status: ChecklistRecord["status"]): string => {
   return "Concluido";
 };
 
-export const HomeScreen = ({ checklists, onCreatePress, onExportBackupPress, onOpenChecklist }: HomeScreenProps) => {
+export const HomeScreen = ({
+  checklists,
+  onCreatePress,
+  onExportBackupPress,
+  onImportBackupPress,
+  onOpenChecklist,
+}: HomeScreenProps) => {
   return (
     <View style={styles.container}>
       <View style={styles.headerCard}>
@@ -31,6 +38,7 @@ export const HomeScreen = ({ checklists, onCreatePress, onExportBackupPress, onO
 
       <PrimaryButton label="Novo Checklist" onPress={onCreatePress} />
       <PrimaryButton label="Exportar Backup (.zip)" onPress={onExportBackupPress} />
+      <PrimaryButton label="Importar Backup (.zip)" onPress={onImportBackupPress} />
 
       <Text style={styles.listTitle}>Checklists</Text>
       <FlatList

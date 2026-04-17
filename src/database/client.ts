@@ -1,13 +1,12 @@
 import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
 import { runMigrationsAsync } from "./schema";
-
-const DATABASE_NAME = "girofrancis.db";
+import { CHECKLIST_DATABASE_FILE_NAME } from "../constants/storage";
 
 let databasePromise: Promise<SQLiteDatabase> | null = null;
 
 export const getDatabaseAsync = async (): Promise<SQLiteDatabase> => {
   if (!databasePromise) {
-    databasePromise = openDatabaseAsync(DATABASE_NAME);
+    databasePromise = openDatabaseAsync(CHECKLIST_DATABASE_FILE_NAME);
   }
 
   return databasePromise;
@@ -21,3 +20,17 @@ export const initializeDatabaseAsync = async (): Promise<void> => {
   await runMigrationsAsync(database);
 };
 
+export const resetDatabaseConnectionAsync = async (): Promise<void> => {
+  if (!databasePromise) {
+    return;
+  }
+
+  try {
+    const database = await databasePromise;
+    await database.closeAsync();
+  } catch {
+    // If the current platform does not support close, resetting the promise is enough for reopen.
+  } finally {
+    databasePromise = null;
+  }
+};

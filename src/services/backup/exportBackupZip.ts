@@ -2,11 +2,11 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import JSZip from "jszip";
 import type { ChecklistRecord } from "../../types/checklist";
+import { CHECKLIST_DATABASE_FILE_NAME } from "../../constants/storage";
 
-const DATABASE_FILE_NAME = "girofrancis.db";
 const SQLITE_DIRECTORY = `${FileSystem.documentDirectory}SQLite`;
 
-const getDatabasePath = (): string => `${SQLITE_DIRECTORY}/${DATABASE_FILE_NAME}`;
+const getDatabasePath = (): string => `${SQLITE_DIRECTORY}/${CHECKLIST_DATABASE_FILE_NAME}`;
 
 export const exportBackupZipAsync = async (checklists: ChecklistRecord[]): Promise<string> => {
   const zip = new JSZip();
@@ -15,7 +15,7 @@ export const exportBackupZipAsync = async (checklists: ChecklistRecord[]): Promi
 
   if (databaseInfo.exists) {
     const databaseBase64 = await FileSystem.readAsStringAsync(databasePath, { encoding: FileSystem.EncodingType.Base64 });
-    zip.file(`database/${DATABASE_FILE_NAME}`, databaseBase64, { base64: true });
+    zip.file(`database/${CHECKLIST_DATABASE_FILE_NAME}`, databaseBase64, { base64: true });
   }
 
   const uniquePhotoPaths = new Set<string>();
@@ -60,4 +60,3 @@ export const exportAndShareBackupZipAsync = async (checklists: ChecklistRecord[]
     await Sharing.shareAsync(backupPath);
   }
 };
-
