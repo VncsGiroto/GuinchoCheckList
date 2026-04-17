@@ -3,6 +3,7 @@ import SignatureScreen from "react-native-signature-canvas";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { APP_COLORS } from "../theme/colors";
 import * as ScreenOrientation from "expo-screen-orientation";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface SignatureCaptureFieldProps {
   label: string;
@@ -14,6 +15,7 @@ interface SignatureCaptureFieldProps {
 export const SignatureCaptureField = ({ label, value, onChange, disabled = false }: SignatureCaptureFieldProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const signatureRef = useRef<any>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const applySignatureOrientationAsync = async () => {
@@ -69,9 +71,9 @@ export const SignatureCaptureField = ({ label, value, onChange, disabled = false
         </Pressable>
       </View>
 
-      <Modal animationType="slide" transparent visible={isOpen}>
+      <Modal animationType="slide" transparent={false} visible={isOpen}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={[styles.modalCard, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 12 }]}>
             <Text style={styles.modalTitle}>Desenhe a assinatura</Text>
             <View style={styles.signatureWrap}>
               <SignatureScreen
@@ -183,16 +185,13 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
+    backgroundColor: "#FFFFFF",
   },
   modalCard: {
+    flex: 1,
     backgroundColor: "#FFFFFF",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 12,
+    paddingHorizontal: 12,
     gap: 10,
-    minHeight: 420,
   },
   modalTitle: {
     fontSize: 16,
@@ -201,17 +200,17 @@ const styles = StyleSheet.create({
   },
   signatureWrap: {
     flex: 1,
-    minHeight: 300,
     borderRadius: 12,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: APP_COLORS.neutralBorder,
   },
   modalActions: {
-    flexDirection: "column",
+    flexDirection: "row",
     gap: 8,
   },
   primaryButton: {
+    flex: 1.3,
     minHeight: 44,
     borderRadius: 10,
     backgroundColor: APP_COLORS.primary,
@@ -225,6 +224,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   secondaryButton: {
+    flex: 1,
     minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
@@ -240,6 +240,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   cancelButton: {
+    flex: 1,
     minHeight: 46,
     borderRadius: 10,
     backgroundColor: APP_COLORS.text,
