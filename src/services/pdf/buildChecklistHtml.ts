@@ -16,6 +16,42 @@ const renderCoordinates = (latitude: number | undefined, longitude: number | und
   return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 };
 
+const PHOTO_ORDER = ["frente", "traseira", "lado_esq", "lado_dir", "teto", "danos"] as const;
+
+const extractPhotoLabel = (photoPath: string): string => {
+  const fileName = photoPath.split("/").pop()?.toLowerCase() ?? "";
+
+  const match = PHOTO_ORDER.find((item) => fileName.includes(`_${item}_`));
+  if (!match) {
+    return "registro";
+  }
+
+  if (match === "lado_esq") return "Lado Esq";
+  if (match === "lado_dir") return "Lado Dir";
+  return match.charAt(0).toUpperCase() + match.slice(1);
+};
+
+const renderPhotosGrid = (photoPaths: string[]): string => {
+  if (photoPaths.length === 0) {
+    return "<p>Sem fotos registradas.</p>";
+  }
+
+  return `
+    <div class="photos-grid">
+      ${photoPaths
+        .map(
+          (photoPath) => `
+            <div class="photo-item">
+              <img src="${photoPath}" alt="${extractPhotoLabel(photoPath)}" />
+              <p>${extractPhotoLabel(photoPath)}</p>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+};
+
 export const buildChecklistHtml = (checklist: ChecklistRecord): string => {
   return `
 <!doctype html>
@@ -50,6 +86,25 @@ export const buildChecklistHtml = (checklist: ChecklistRecord): string => {
         grid-template-columns: 1fr 1fr;
         gap: 16px;
       }
+      .photos-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .photo-item {
+        border: 1px solid #DDDDDD;
+        border-radius: 8px;
+        padding: 6px;
+      }
+      .photo-item img {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+      }
+      .photo-item p {
+        margin: 4px 0 0;
+        font-size: 12px;
+      }
     </style>
   </head>
   <body>
@@ -81,6 +136,12 @@ export const buildChecklistHtml = (checklist: ChecklistRecord): string => {
       <tr><th>Observacoes</th><td>${checklist.vehicle.notes ?? "-"}</td></tr>
     </table>
 
+    <h2>Fotos da Coleta</h2>
+    ${renderPhotosGrid(checklist.photoPaths.filter((photoPath) => photoPath.includes("_pickup_")))}
+
+    <h2>Fotos da Entrega</h2>
+    ${renderPhotosGrid(checklist.photoPaths.filter((photoPath) => photoPath.includes("_delivery_")))}
+
     <h2>Assinaturas e Auditoria</h2>
     <div class="signature-container">
       <div>
@@ -100,4 +161,3 @@ export const buildChecklistHtml = (checklist: ChecklistRecord): string => {
 </html>
 `;
 };
-

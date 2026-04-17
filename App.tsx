@@ -50,7 +50,12 @@ export default function App() {
   );
 
   const handleSavePickupAsync = useCallback(
-    async (signatureBase64: string | null, coordinates: GeoPoint | null, timestampIso: string) => {
+    async (
+      signatureBase64: string | null,
+      coordinates: GeoPoint | null,
+      timestampIso: string,
+      photoPaths: string[],
+    ) => {
       if (!selectedChecklistId) {
         return;
       }
@@ -60,7 +65,7 @@ export default function App() {
         signatureBase64,
         coordinates,
         timestampIso,
-        photoPaths: [],
+        photoPaths,
       });
 
       await loadChecklistsAsync();
@@ -69,7 +74,12 @@ export default function App() {
   );
 
   const handleSaveDeliveryAsync = useCallback(
-    async (signatureBase64: string | null, coordinates: GeoPoint | null, timestampIso: string) => {
+    async (
+      signatureBase64: string | null,
+      coordinates: GeoPoint | null,
+      timestampIso: string,
+      photoPaths: string[],
+    ) => {
       if (!selectedChecklistId) {
         return;
       }
@@ -79,7 +89,7 @@ export default function App() {
         signatureBase64,
         coordinates,
         timestampIso,
-        photoPaths: [],
+        photoPaths,
       });
 
       await loadChecklistsAsync();
