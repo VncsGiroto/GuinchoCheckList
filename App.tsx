@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { Alert, SafeAreaView, StyleSheet } from "react-native";
+import { Alert, StyleSheet } from "react-native";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { initializeDatabaseAsync } from "./src/database/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -9,6 +9,7 @@ import type { ChecklistRecord, CreateChecklistInput, GeoPoint } from "./src/type
 import { ChecklistCreateScreen } from "./src/screens/ChecklistCreateScreen";
 import { ChecklistDetailsScreen } from "./src/screens/ChecklistDetailsScreen";
 import { exportAndShareBackupZipAsync } from "./src/services/backup/exportBackupZip";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 type AppView = "home" | "create" | "details";
 
@@ -107,33 +108,35 @@ export default function App() {
   }, [checklists]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="dark" />
-      {currentView === "home" ? (
-        <HomeScreen
-          checklists={checklists}
-          onCreatePress={() => setCurrentView("create")}
-          onExportBackupPress={() => void handleExportBackupAsync()}
-          onOpenChecklist={(checklistId) => {
-            setSelectedChecklistId(checklistId);
-            setCurrentView("details");
-          }}
-        />
-      ) : null}
+    <SafeAreaProvider>
+      <SafeAreaView edges={["top", "right", "left"]} style={styles.container}>
+        <StatusBar style="dark" />
+        {currentView === "home" ? (
+          <HomeScreen
+            checklists={checklists}
+            onCreatePress={() => setCurrentView("create")}
+            onExportBackupPress={() => void handleExportBackupAsync()}
+            onOpenChecklist={(checklistId) => {
+              setSelectedChecklistId(checklistId);
+              setCurrentView("details");
+            }}
+          />
+        ) : null}
 
-      {currentView === "create" ? (
-        <ChecklistCreateScreen onBack={() => setCurrentView("home")} onSave={handleCreateChecklistAsync} />
-      ) : null}
+        {currentView === "create" ? (
+          <ChecklistCreateScreen onBack={() => setCurrentView("home")} onSave={handleCreateChecklistAsync} />
+        ) : null}
 
-      {currentView === "details" && selectedChecklist ? (
-        <ChecklistDetailsScreen
-          checklist={selectedChecklist}
-          onBack={() => setCurrentView("home")}
-          onDeliverySave={handleSaveDeliveryAsync}
-          onPickupSave={handleSavePickupAsync}
-        />
-      ) : null}
-    </SafeAreaView>
+        {currentView === "details" && selectedChecklist ? (
+          <ChecklistDetailsScreen
+            checklist={selectedChecklist}
+            onBack={() => setCurrentView("home")}
+            onDeliverySave={handleSaveDeliveryAsync}
+            onPickupSave={handleSavePickupAsync}
+          />
+        ) : null}
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
