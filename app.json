@@ -18,14 +18,17 @@
         "NSCameraUsageDescription": "Usamos a camera para registrar fotos do veiculo durante coleta e entrega.",
         "NSLocationWhenInUseUsageDescription": "Usamos sua localizacao para registrar evidencia de coleta e entrega no checklist."
       }
-      
     },
     "android": {
       "permissions": [
         "CAMERA",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
-        "READ_MEDIA_IMAGES"
+        "READ_MEDIA_IMAGES",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -43,6 +46,11 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e83a0144-96ee-4dfa-b387-4b4c976b5ae5"
+      }
     }
   }
 }
