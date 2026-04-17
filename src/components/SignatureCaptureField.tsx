@@ -1,6 +1,6 @@
 import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import SignatureScreen from "react-native-signature-canvas";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { APP_COLORS } from "../theme/colors";
 
 interface SignatureCaptureFieldProps {
@@ -12,9 +12,11 @@ interface SignatureCaptureFieldProps {
 
 export const SignatureCaptureField = ({ label, value, onChange, disabled = false }: SignatureCaptureFieldProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const signatureRef = useRef<any>(null);
 
   const htmlStyle = useMemo(
     () => `
+      .m-signature-pad--footer { display: none; margin: 0; }
       .m-signature-pad { box-shadow: none; border: none; }
       body, html { width: 100%; height: 100%; margin: 0; padding: 0; background: #ffffff; }
     `,
@@ -57,9 +59,7 @@ export const SignatureCaptureField = ({ label, value, onChange, disabled = false
             <View style={styles.signatureWrap}>
               <SignatureScreen
                 autoClear={false}
-                clearText="Limpar"
                 descriptionText="Assine dentro da area"
-                confirmText="Confirmar"
                 onEmpty={() => {
                   onChange(null);
                   setIsOpen(false);
@@ -68,8 +68,23 @@ export const SignatureCaptureField = ({ label, value, onChange, disabled = false
                   onChange(signatureDataUrl);
                   setIsOpen(false);
                 }}
+                ref={signatureRef}
                 webStyle={htmlStyle}
               />
+            </View>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => {
+                  signatureRef.current?.clearSignature();
+                  onChange(null);
+                }}
+                style={styles.secondaryButton}
+              >
+                <Text style={styles.secondaryText}>Limpar</Text>
+              </Pressable>
+              <Pressable onPress={() => signatureRef.current?.readSignature()} style={styles.primaryButton}>
+                <Text style={styles.primaryText}>Confirmar assinatura</Text>
+              </Pressable>
             </View>
             <Pressable onPress={() => setIsOpen(false)} style={styles.closeButton}>
               <Text style={styles.closeText}>Cancelar</Text>
@@ -174,6 +189,40 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: APP_COLORS.neutralBorder,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  primaryButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: APP_COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  primaryText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  secondaryButton: {
+    minHeight: 44,
+    minWidth: 90,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: APP_COLORS.neutralBorder,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  secondaryText: {
+    color: APP_COLORS.text,
+    fontSize: 14,
+    fontWeight: "700",
   },
   closeButton: {
     minHeight: 46,
