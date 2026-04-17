@@ -5,9 +5,12 @@ import {
   CHECKLIST_DATABASE_FILE_NAME,
   CHECKLIST_PHOTOS_DIRECTORY_NAME,
 } from "../../constants/storage";
-import { initializeDatabaseAsync, resetDatabaseConnectionAsync } from "../../database/client";
+import {
+  getDatabaseFilesAsync,
+  initializeDatabaseAsync,
+  resetDatabaseConnectionAsync,
+} from "../../database/client";
 
-const SQLITE_DIRECTORY = `${FileSystem.documentDirectory}SQLite`;
 const CHECKLIST_PHOTOS_DIRECTORY = `${FileSystem.documentDirectory}${CHECKLIST_PHOTOS_DIRECTORY_NAME}`;
 
 interface ImportBackupResult {
@@ -37,25 +40,44 @@ export const importBackupZipAsync = async (): Promise<ImportBackupResult> => {
   const zipBase64 = await FileSystem.readAsStringAsync(zipUri, { encoding: FileSystem.EncodingType.Base64 });
   const zip = await JSZip.loadAsync(zipBase64, { base64: true });
 
-  await ensureDirectoryAsync(SQLITE_DIRECTORY);
+  const dbFiles = await getDatabaseFilesAsync();
+  const mainDirectory = dbFiles.main.split("/").slice(0, -1).join("/");
+  await ensureDirectoryAsync(mainDirectory);
   await ensureDirectoryAsync(CHECKLIST_PHOTOS_DIRECTORY);
 
   let restoredDatabase = false;
   let restoredPhotosCount = 0;
 
-  for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
-    if (zipEntry.dir) {
+  await resetDatabaseConnectionAsync();
+
+  for (const filePath of [dbFiles.main, dbFiles.wal, dbFiles.shm]) {
+    const currentInfo = await FileSystem.getInfoAsync(filePath);
+    if (currentInfo.exists) {
+      await FileSystem.deleteAsync(filePath, { idempotent: true });
+    }
+  }
+
+  const expectedDbZipEntries: Array<{ zipPath: string; outputPath: string }> = [
+    { zipPath: `database/${CHECKLIST_DATABASE_FILE_NAME}`, outputPath: dbFiles.main },
+    { zipPath: `database/${CHECKLIST_DATABASE_FILE_NAME}-wal`, outputPath: dbFiles.wal },
+    { zipPath: `database/${CHECKLIST_DATABASE_FILE_NAME}-shm`, outputPath: dbFiles.shm },
+  ];
+
+  for (const entry of expectedDbZipEntries) {
+    const zipEntry = zip.file(entry.zipPath);
+    if (!zipEntry) {
       continue;
     }
 
-    if (zipPath.toLowerCase() === `database/${CHECKLIST_DATABASE_FILE_NAME}`.toLowerCase()) {
-      const databaseBase64 = await zipEntry.async("base64");
-      const databaseOutputPath = `${SQLITE_DIRECTORY}/${CHECKLIST_DATABASE_FILE_NAME}`;
-      await resetDatabaseConnectionAsync();
-      await FileSystem.writeAsStringAsync(databaseOutputPath, databaseBase64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      restoredDatabase = true;
+    const base64 = await zipEntry.async("base64");
+    await FileSystem.writeAsStringAsync(entry.outputPath, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    restoredDatabase = true;
+  }
+
+  for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
+    if (zipEntry.dir) {
       continue;
     }
 
@@ -73,4 +95,3 @@ export const importBackupZipAsync = async (): Promise<ImportBackupResult> => {
   await initializeDatabaseAsync();
   return { restoredDatabase, restoredPhotosCount };
 };
-

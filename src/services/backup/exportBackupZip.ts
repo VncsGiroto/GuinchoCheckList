@@ -3,19 +3,26 @@ import * as Sharing from "expo-sharing";
 import JSZip from "jszip";
 import type { ChecklistRecord } from "../../types/checklist";
 import { CHECKLIST_DATABASE_FILE_NAME } from "../../constants/storage";
-
-const SQLITE_DIRECTORY = `${FileSystem.documentDirectory}SQLite`;
-
-const getDatabasePath = (): string => `${SQLITE_DIRECTORY}/${CHECKLIST_DATABASE_FILE_NAME}`;
+import { getDatabaseFilesAsync } from "../../database/client";
 
 export const exportBackupZipAsync = async (checklists: ChecklistRecord[]): Promise<string> => {
   const zip = new JSZip();
-  const databasePath = getDatabasePath();
-  const databaseInfo = await FileSystem.getInfoAsync(databasePath);
+  const dbFiles = await getDatabaseFilesAsync();
 
-  if (databaseInfo.exists) {
-    const databaseBase64 = await FileSystem.readAsStringAsync(databasePath, { encoding: FileSystem.EncodingType.Base64 });
-    zip.file(`database/${CHECKLIST_DATABASE_FILE_NAME}`, databaseBase64, { base64: true });
+  const dbFileEntries: Array<{ path: string; zipName: string }> = [
+    { path: dbFiles.main, zipName: CHECKLIST_DATABASE_FILE_NAME },
+    { path: dbFiles.wal, zipName: `${CHECKLIST_DATABASE_FILE_NAME}-wal` },
+    { path: dbFiles.shm, zipName: `${CHECKLIST_DATABASE_FILE_NAME}-shm` },
+  ];
+
+  for (const fileEntry of dbFileEntries) {
+    const info = await FileSystem.getInfoAsync(fileEntry.path);
+    if (!info.exists) {
+      continue;
+    }
+
+    const base64 = await FileSystem.readAsStringAsync(fileEntry.path, { encoding: FileSystem.EncodingType.Base64 });
+    zip.file(`database/${fileEntry.zipName}`, base64, { base64: true });
   }
 
   const uniquePhotoPaths = new Set<string>();

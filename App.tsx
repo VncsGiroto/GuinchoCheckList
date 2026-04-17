@@ -112,8 +112,9 @@ export default function App() {
   const handleImportBackupAsync = useCallback(async () => {
     try {
       const result = await importBackupZipAsync();
-      await loadChecklistsAsync();
+      setSelectedChecklistId(null);
       setCurrentView("home");
+      await loadChecklistsAsync();
       Alert.alert(
         "Backup importado",
         `Banco: ${result.restoredDatabase ? "restaurado" : "nao encontrado"}\nFotos restauradas: ${result.restoredPhotosCount}`,
