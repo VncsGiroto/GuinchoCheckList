@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "girofrancis-checklist",
+    "name": "Girofrancis Checklist",
     "slug": "girofrancis-checklist",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,9 +13,19 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Usamos a camera para registrar fotos do veiculo durante coleta e entrega.",
+        "NSLocationWhenInUseUsageDescription": "Usamos sua localizacao para registrar evidencia de coleta e entrega no checklist."
+      }
     },
     "android": {
+      "permissions": [
+        "CAMERA",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "READ_MEDIA_IMAGES"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -23,6 +33,11 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
+    "plugins": [
+      "expo-camera",
+      "expo-location",
+      "expo-sqlite"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     }

@@ -1,0 +1,103 @@
+import type { ChecklistRecord } from "../../types/checklist";
+
+const renderSignature = (signatureBase64: string | null): string => {
+  if (!signatureBase64) {
+    return "<p>Sem assinatura</p>";
+  }
+
+  return `<img src="${signatureBase64}" alt="Assinatura" style="height: 70px; width: auto;" />`;
+};
+
+const renderCoordinates = (latitude: number | undefined, longitude: number | undefined): string => {
+  if (latitude === undefined || longitude === undefined) {
+    return "Nao capturado";
+  }
+
+  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+};
+
+export const buildChecklistHtml = (checklist: ChecklistRecord): string => {
+  return `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #1A1A1A;
+        margin: 20px;
+      }
+      h1, h2 {
+        margin-bottom: 6px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 12px;
+      }
+      .table td, .table th {
+        border: 1px solid #DDDDDD;
+        padding: 8px;
+      }
+      .signature-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div>
+        <h1>Girofrancis Checklist</h1>
+        <p>Relatorio de Vistoria</p>
+      </div>
+      <div>
+        <p><strong>Prestador:</strong> Girofrancis Guinchos</p>
+        <p><strong>ID:</strong> ${checklist.id}</p>
+      </div>
+    </div>
+
+    <h2>Cliente</h2>
+    <table class="table">
+      <tr><th>Nome</th><td>${checklist.customer.name}</td></tr>
+      <tr><th>Documento</th><td>${checklist.customer.documentId ?? "-"}</td></tr>
+      <tr><th>Telefone</th><td>${checklist.customer.phone ?? "-"}</td></tr>
+    </table>
+
+    <h2>Veiculo</h2>
+    <table class="table">
+      <tr><th>Placa</th><td>${checklist.vehicle.plate}</td></tr>
+      <tr><th>Marca</th><td>${checklist.vehicle.brand}</td></tr>
+      <tr><th>Modelo</th><td>${checklist.vehicle.model}</td></tr>
+      <tr><th>Cor</th><td>${checklist.vehicle.color}</td></tr>
+      <tr><th>Ano</th><td>${checklist.vehicle.year}</td></tr>
+      <tr><th>Observacoes</th><td>${checklist.vehicle.notes ?? "-"}</td></tr>
+    </table>
+
+    <h2>Assinaturas e Auditoria</h2>
+    <div class="signature-container">
+      <div>
+        <h3>Coleta</h3>
+        ${renderSignature(checklist.pickup.signatureBase64)}
+        <p><strong>GPS:</strong> ${renderCoordinates(checklist.pickup.coordinates?.latitude, checklist.pickup.coordinates?.longitude)}</p>
+        <p><strong>Horario:</strong> ${checklist.pickup.timestampIso ?? "Nao capturado"}</p>
+      </div>
+      <div>
+        <h3>Entrega</h3>
+        ${renderSignature(checklist.delivery.signatureBase64)}
+        <p><strong>GPS:</strong> ${renderCoordinates(checklist.delivery.coordinates?.latitude, checklist.delivery.coordinates?.longitude)}</p>
+        <p><strong>Horario:</strong> ${checklist.delivery.timestampIso ?? "Nao capturado"}</p>
+      </div>
+    </div>
+  </body>
+</html>
+`;
+};
+
