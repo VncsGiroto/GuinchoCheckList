@@ -5,11 +5,12 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusChip } from "../components/StatusChip";
 import { APP_COLORS } from "../theme/colors";
 import type { ChecklistRecord, GeoPoint } from "../types/checklist";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocationCapture } from "../hooks/useLocationCapture";
 import { usePhotoCapture } from "../hooks/usePhotoCapture";
 import { generateChecklistPdfAsync } from "../services/pdf/generateChecklistPdf";
 import * as Sharing from "expo-sharing";
+import { SignatureCaptureField } from "../components/SignatureCaptureField";
 
 type StageType = "pickup" | "delivery";
 type PhotoLabelKey = "frente" | "traseira" | "lado_esq" | "lado_dir" | "teto" | "interior" | "danos";
@@ -66,8 +67,8 @@ export const ChecklistDetailsScreen = ({
   const cameraRef = useRef<CameraView | null>(null);
   const { hasLocationPermission, isLoadingLocation, captureLocationAsync } = useLocationCapture();
   const { hasCameraPermission, requestCameraPermission, compressAndPersistPhotoAsync, isSavingPhoto } = usePhotoCapture();
-  const [pickupSignature, setPickupSignature] = useState("");
-  const [deliverySignature, setDeliverySignature] = useState("");
+  const [pickupSignature, setPickupSignature] = useState<string | null>(checklist.pickup.signatureBase64);
+  const [deliverySignature, setDeliverySignature] = useState<string | null>(checklist.delivery.signatureBase64);
   const [isSavingPickup, setIsSavingPickup] = useState(false);
   const [isSavingDelivery, setIsSavingDelivery] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -75,6 +76,11 @@ export const ChecklistDetailsScreen = ({
   const [activePhotoLabel, setActivePhotoLabel] = useState<PhotoLabelKey>("frente");
   const [pickupDraftPhotos, setPickupDraftPhotos] = useState<string[]>([]);
   const [deliveryDraftPhotos, setDeliveryDraftPhotos] = useState<string[]>([]);
+
+  useEffect(() => {
+    setPickupSignature(checklist.pickup.signatureBase64);
+    setDeliverySignature(checklist.delivery.signatureBase64);
+  }, [checklist.delivery.signatureBase64, checklist.pickup.signatureBase64, checklist.id]);
 
   const isPickupLocked = useMemo(() => {
     return checklist.status !== "rascunho" || Boolean(checklist.pickup.signatureBase64);
@@ -123,8 +129,7 @@ export const ChecklistDetailsScreen = ({
     try {
       const coordinates = await captureLocationAsync();
       const timestampIso = new Date().toISOString();
-      await onPickupSave(pickupSignature.trim() || null, coordinates, timestampIso, pickupDraftPhotos);
-      setPickupSignature("");
+      await onPickupSave(pickupSignature, coordinates, timestampIso, pickupDraftPhotos);
       setPickupDraftPhotos([]);
       setActiveStageCamera(null);
       Alert.alert("Coleta salva", "GPS, horario e fotos da coleta foram registrados.");
@@ -140,8 +145,7 @@ export const ChecklistDetailsScreen = ({
     try {
       const coordinates = await captureLocationAsync();
       const timestampIso = new Date().toISOString();
-      await onDeliverySave(deliverySignature.trim() || null, coordinates, timestampIso, deliveryDraftPhotos);
-      setDeliverySignature("");
+      await onDeliverySave(deliverySignature, coordinates, timestampIso, deliveryDraftPhotos);
       setDeliveryDraftPhotos([]);
       setActiveStageCamera(null);
       Alert.alert("Entrega salva", "GPS, horario e fotos da entrega foram registrados.");
@@ -261,11 +265,10 @@ export const ChecklistDetailsScreen = ({
         <Text style={styles.cardTitle}>Etapa de coleta</Text>
         <Text style={styles.meta}>Hora: {checklist.pickup.timestampIso ?? "Nao capturado"}</Text>
         <Text style={styles.meta}>GPS: {formatCoordinates(checklist.pickup.coordinates)}</Text>
-        <LabeledTextInput
-          editable={!isPickupLocked}
-          label="Assinatura coleta (base64 opcional)"
-          multiline
-          onChangeText={setPickupSignature}
+        <SignatureCaptureField
+          disabled={isPickupLocked}
+          label="Assinatura coleta (opcional)"
+          onChange={setPickupSignature}
           value={pickupSignature}
         />
         <PrimaryButton
@@ -279,11 +282,10 @@ export const ChecklistDetailsScreen = ({
         <Text style={styles.cardTitle}>Etapa de entrega</Text>
         <Text style={styles.meta}>Hora: {checklist.delivery.timestampIso ?? "Nao capturado"}</Text>
         <Text style={styles.meta}>GPS: {formatCoordinates(checklist.delivery.coordinates)}</Text>
-        <LabeledTextInput
-          editable={!isDeliveryLocked}
-          label="Assinatura entrega (base64 opcional)"
-          multiline
-          onChangeText={setDeliverySignature}
+        <SignatureCaptureField
+          disabled={isDeliveryLocked}
+          label="Assinatura entrega (opcional)"
+          onChange={setDeliverySignature}
           value={deliverySignature}
         />
         <PrimaryButton
