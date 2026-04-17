@@ -1,7 +1,8 @@
 import { Image, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import SignatureScreen from "react-native-signature-canvas";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { APP_COLORS } from "../theme/colors";
+import * as ScreenOrientation from "expo-screen-orientation";
 
 interface SignatureCaptureFieldProps {
   label: string;
@@ -13,6 +14,22 @@ interface SignatureCaptureFieldProps {
 export const SignatureCaptureField = ({ label, value, onChange, disabled = false }: SignatureCaptureFieldProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const signatureRef = useRef<any>(null);
+
+  useEffect(() => {
+    const applySignatureOrientationAsync = async () => {
+      if (isOpen) {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      } else {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      }
+    };
+
+    void applySignatureOrientationAsync();
+
+    return () => {
+      void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+    };
+  }, [isOpen]);
 
   const htmlStyle = useMemo(
     () => `
@@ -85,10 +102,10 @@ export const SignatureCaptureField = ({ label, value, onChange, disabled = false
               <Pressable onPress={() => signatureRef.current?.readSignature()} style={styles.primaryButton}>
                 <Text style={styles.primaryText}>Confirmar assinatura</Text>
               </Pressable>
+              <Pressable onPress={() => setIsOpen(false)} style={styles.cancelButton}>
+                <Text style={styles.cancelText}>Cancelar</Text>
+              </Pressable>
             </View>
-            <Pressable onPress={() => setIsOpen(false)} style={styles.closeButton}>
-              <Text style={styles.closeText}>Cancelar</Text>
-            </Pressable>
           </View>
         </View>
       </Modal>
@@ -191,11 +208,10 @@ const styles = StyleSheet.create({
     borderColor: APP_COLORS.neutralBorder,
   },
   modalActions: {
-    flexDirection: "row",
+    flexDirection: "column",
     gap: 8,
   },
   primaryButton: {
-    flex: 1,
     minHeight: 44,
     borderRadius: 10,
     backgroundColor: APP_COLORS.primary,
@@ -210,7 +226,6 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     minHeight: 44,
-    minWidth: 90,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: APP_COLORS.neutralBorder,
@@ -224,14 +239,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-  closeButton: {
+  cancelButton: {
     minHeight: 46,
     borderRadius: 10,
     backgroundColor: APP_COLORS.text,
     alignItems: "center",
     justifyContent: "center",
   },
-  closeText: {
+  cancelText: {
     color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
