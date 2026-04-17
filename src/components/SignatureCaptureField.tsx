@@ -15,7 +15,6 @@ export const SignatureCaptureField = ({ label, value, onChange, disabled = false
 
   const htmlStyle = useMemo(
     () => `
-      .m-signature-pad--footer { display: none; margin: 0; }
       .m-signature-pad { box-shadow: none; border: none; }
       body, html { width: 100%; height: 100%; margin: 0; padding: 0; background: #ffffff; }
     `,
@@ -58,7 +57,9 @@ export const SignatureCaptureField = ({ label, value, onChange, disabled = false
             <View style={styles.signatureWrap}>
               <SignatureScreen
                 autoClear={false}
+                clearText="Limpar"
                 descriptionText="Assine dentro da area"
+                confirmText="Confirmar"
                 onEmpty={() => {
                   onChange(null);
                   setIsOpen(false);
@@ -187,4 +188,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

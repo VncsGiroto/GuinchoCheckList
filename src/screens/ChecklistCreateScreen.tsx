@@ -23,8 +23,8 @@ export const ChecklistCreateScreen = ({ onBack, onSave }: ChecklistCreateScreenP
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSaveAsync = async () => {
-    if (!customerName.trim() || !plate.trim() || !brand.trim() || !model.trim() || !color.trim() || !year.trim()) {
-      Alert.alert("Campos obrigatorios", "Preencha cliente, placa, marca, modelo, cor e ano.");
+    if (!customerName.trim() || !brand.trim() || !model.trim() || !color.trim()) {
+      Alert.alert("Campos obrigatorios", "Preencha cliente, marca, modelo e cor.");
       return;
     }
 
@@ -64,11 +64,11 @@ export const ChecklistCreateScreen = ({ onBack, onSave }: ChecklistCreateScreenP
       </View>
 
       <View style={styles.card}>
-        <LabeledTextInput label="Placa*" onChangeText={setPlate} value={plate} />
+        <LabeledTextInput label="Placa" onChangeText={setPlate} value={plate} />
         <LabeledTextInput label="Marca*" onChangeText={setBrand} value={brand} />
         <LabeledTextInput label="Modelo*" onChangeText={setModel} value={model} />
         <LabeledTextInput label="Cor*" onChangeText={setColor} value={color} />
-        <LabeledTextInput label="Ano*" onChangeText={setYear} value={year} />
+        <LabeledTextInput label="Ano" onChangeText={setYear} value={year} />
         <LabeledTextInput label="Observacoes" multiline onChangeText={setNotes} value={notes} />
       </View>
 
@@ -108,4 +108,3 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 });
-
