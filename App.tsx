@@ -12,8 +12,9 @@ import { exportAndShareBackupZipAsync } from "./src/services/backup/exportBackup
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { importBackupZipAsync } from "./src/services/backup/importBackupZip";
 import { deleteChecklistAsync } from "./src/services/checklist/deleteChecklist";
+import { SettingsScreen } from "./src/screens/SettingsScreen";
 
-type AppView = "home" | "create" | "details";
+type AppView = "home" | "create" | "details" | "settings";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>("home");
@@ -144,6 +145,7 @@ export default function App() {
           <HomeScreen
             checklists={checklists}
             onCreatePress={() => setCurrentView("create")}
+            onSettingsPress={() => setCurrentView("settings")}
             onExportBackupPress={() => void handleExportBackupAsync()}
             onImportBackupPress={() => void handleImportBackupAsync()}
             onOpenChecklist={(checklistId) => {
@@ -166,6 +168,8 @@ export default function App() {
             onPickupSave={handleSavePickupAsync}
           />
         ) : null}
+
+        {currentView === "settings" ? <SettingsScreen onBack={() => setCurrentView("home")} /> : null}
       </SafeAreaView>
     </SafeAreaProvider>
   );

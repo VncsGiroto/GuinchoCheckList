@@ -4,7 +4,8 @@ import JSZip from "jszip";
 import { CHECKLIST_DATABASE_FILE_NAME, CHECKLIST_PHOTOS_DIRECTORY_NAME } from "../../constants/storage";
 import { initializeDatabaseAsync } from "../../database/client";
 import { checklistRepository } from "../../database/repositories/checklistRepository";
-import { parseBackupChecklists } from "./backupPayload";
+import { settingsRepository } from "../../database/repositories/settingsRepository";
+import { parseBackupChecklists, parseBackupProviderSettings } from "./backupPayload";
 
 const CHECKLIST_PHOTOS_DIRECTORY = `${FileSystem.documentDirectory}${CHECKLIST_PHOTOS_DIRECTORY_NAME}`;
 
@@ -41,10 +42,19 @@ export const importBackupZipAsync = async (): Promise<ImportBackupResult> => {
   let restoredPhotosCount = 0;
 
   const checklistsEntry = zip.file("checklists.json");
+  const providerSettingsEntry = zip.file("provider-settings.json");
+
+  await initializeDatabaseAsync();
+
+  if (providerSettingsEntry) {
+    const jsonText = await providerSettingsEntry.async("text");
+    const settings = parseBackupProviderSettings(jsonText);
+    await settingsRepository.replaceProviderSettings(settings);
+  }
+
   if (checklistsEntry) {
     const jsonText = await checklistsEntry.async("text");
     const records = parseBackupChecklists(jsonText);
-    await initializeDatabaseAsync();
     await checklistRepository.replaceAll(records);
     restoredDatabase = true;
   } else if (zip.file(`database/${CHECKLIST_DATABASE_FILE_NAME}`)) {

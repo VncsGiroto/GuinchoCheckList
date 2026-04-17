@@ -1,4 +1,5 @@
 import type { ChecklistRecord } from "../../types/checklist";
+import type { ProviderSettings } from "../../types/settings";
 
 const renderSignature = (signatureBase64: string | null): string => {
   if (!signatureBase64) {
@@ -60,6 +61,7 @@ export const buildChecklistHtml = (
   checklist: ChecklistRecord,
   photoSrcMap: Record<string, string>,
   logoDataUri: string | null,
+  providerSettings: ProviderSettings,
 ): string => {
   return `
 <!doctype html>
@@ -136,7 +138,11 @@ export const buildChecklistHtml = (
         </div>
       </div>
       <div>
-        <p><strong>Prestador:</strong> Girofrancis Guinchos</p>
+        <p><strong>Prestador:</strong> ${providerSettings.providerName}</p>
+        <p><strong>Documento:</strong> ${providerSettings.providerDocumentId ?? "-"}</p>
+        <p><strong>Telefone:</strong> ${providerSettings.providerPhone ?? "-"}</p>
+        <p><strong>Email:</strong> ${providerSettings.providerEmail ?? "-"}</p>
+        <p><strong>Endereco:</strong> ${providerSettings.providerAddress ?? "-"}</p>
         <p><strong>ID:</strong> ${checklist.id}</p>
       </div>
     </div>

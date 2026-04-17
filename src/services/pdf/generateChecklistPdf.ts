@@ -3,6 +3,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { Image } from "react-native";
 import type { ChecklistRecord } from "../../types/checklist";
 import { buildChecklistHtml } from "./buildChecklistHtml";
+import { settingsRepository } from "../../database/repositories/settingsRepository";
 
 const slugifyCustomerName = (customerName: string): string => {
   return customerName
@@ -28,6 +29,7 @@ const logoSource = Image.resolveAssetSource(require("../../assets/img/logo.png")
 
 export const generateChecklistPdfAsync = async (checklist: ChecklistRecord): Promise<string> => {
   const photoSrcMap: Record<string, string> = {};
+  const providerSettings = await settingsRepository.getProviderSettings();
 
   for (const photoPath of checklist.photoPaths) {
     try {
@@ -45,7 +47,7 @@ export const generateChecklistPdfAsync = async (checklist: ChecklistRecord): Pro
     }
   }
 
-  const html = buildChecklistHtml(checklist, photoSrcMap, logoSource?.uri ?? null);
+  const html = buildChecklistHtml(checklist, photoSrcMap, logoSource?.uri ?? null, providerSettings);
   const fileName = buildPdfName(checklist);
   const outputPath = `${FileSystem.documentDirectory}${fileName}`;
 

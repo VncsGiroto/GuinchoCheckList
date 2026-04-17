@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from "expo-sqlite";
 
 export const CHECKLIST_TABLE_NAME = "checklists";
+export const APP_SETTINGS_TABLE_NAME = "app_settings";
 
 export const createChecklistTableSql = `
 CREATE TABLE IF NOT EXISTS ${CHECKLIST_TABLE_NAME} (
@@ -27,7 +28,40 @@ CREATE TABLE IF NOT EXISTS ${CHECKLIST_TABLE_NAME} (
 );
 `;
 
+export const createAppSettingsTableSql = `
+CREATE TABLE IF NOT EXISTS ${APP_SETTINGS_TABLE_NAME} (
+  id TEXT PRIMARY KEY NOT NULL,
+  provider_name TEXT NOT NULL,
+  provider_document_id TEXT,
+  provider_phone TEXT,
+  provider_email TEXT,
+  provider_address TEXT,
+  updated_at TEXT NOT NULL
+);
+`;
+
+export const seedAppSettingsSql = `
+INSERT OR IGNORE INTO ${APP_SETTINGS_TABLE_NAME} (
+  id,
+  provider_name,
+  provider_document_id,
+  provider_phone,
+  provider_email,
+  provider_address,
+  updated_at
+) VALUES (
+  'default',
+  'Girofrancis Guinchos',
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  CURRENT_TIMESTAMP
+);
+`;
+
 export const runMigrationsAsync = async (database: SQLiteDatabase): Promise<void> => {
   await database.execAsync(createChecklistTableSql);
+  await database.execAsync(createAppSettingsTableSql);
+  await database.execAsync(seedAppSettingsSql);
 };
-

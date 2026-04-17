@@ -7,6 +7,7 @@ import { APP_COLORS } from "../theme/colors";
 interface HomeScreenProps {
   checklists: ChecklistRecord[];
   onCreatePress: () => void;
+  onSettingsPress: () => void;
   onExportBackupPress: () => void;
   onImportBackupPress: () => void;
   onOpenChecklist: (checklistId: string) => void;
@@ -21,6 +22,7 @@ const translateStatus = (status: ChecklistRecord["status"]): string => {
 export const HomeScreen = ({
   checklists,
   onCreatePress,
+  onSettingsPress,
   onExportBackupPress,
   onImportBackupPress,
   onOpenChecklist,
@@ -33,13 +35,10 @@ export const HomeScreen = ({
           <Text style={styles.title}>Girofrancis Checklist</Text>
         </View>
         <Text style={styles.subtitle}>Checklist de coleta e entrega com rastreabilidade offline.</Text>
-        <View style={styles.statusRow}>
-          <StatusChip label="Offline Ready" variant="success" />
-          <StatusChip label="PDF Juridico" />
-        </View>
       </View>
 
       <PrimaryButton label="Novo Checklist" onPress={onCreatePress} />
+      <PrimaryButton label="Configuracoes da prestadora" onPress={onSettingsPress} />
       <PrimaryButton label="Exportar Backup (.zip)" onPress={onExportBackupPress} />
       <PrimaryButton label="Importar Backup (.zip)" onPress={onImportBackupPress} />
 
@@ -96,8 +95,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logo: {
-    width: 46,
-    height: 46,
+    width: 76,
+    height: 76,
     borderRadius: 8,
   },
   subtitle: {

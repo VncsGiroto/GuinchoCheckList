@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseBackupChecklists } from "./backupPayload";
+import { parseBackupChecklists, parseBackupProviderSettings } from "./backupPayload";
 
 const validPayload = JSON.stringify([
   {
@@ -53,5 +53,32 @@ describe("parseBackupChecklists", () => {
     expect(() => parseBackupChecklists(invalidPayload)).toThrow(
       "existe checklist com campos ausentes ou invalidos",
     );
+  });
+});
+
+describe("parseBackupProviderSettings", () => {
+  it("parses valid provider settings payload", () => {
+    const result = parseBackupProviderSettings(
+      JSON.stringify({
+        providerName: "Girofrancis Guinchos",
+        providerDocumentId: "00.000.000/0001-00",
+        providerPhone: null,
+        providerEmail: null,
+        providerAddress: "Rua Exemplo, 100",
+      }),
+    );
+
+    expect(result.providerName).toBe("Girofrancis Guinchos");
+    expect(result.providerAddress).toBe("Rua Exemplo, 100");
+  });
+
+  it("throws when provider name is missing", () => {
+    expect(() =>
+      parseBackupProviderSettings(
+        JSON.stringify({
+          providerDocumentId: "00.000.000/0001-00",
+        }),
+      ),
+    ).toThrow("provider-settings.json");
   });
 });

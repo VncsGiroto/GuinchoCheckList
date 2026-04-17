@@ -4,10 +4,12 @@ import JSZip from "jszip";
 import type { ChecklistRecord } from "../../types/checklist";
 import { CHECKLIST_DATABASE_FILE_NAME } from "../../constants/storage";
 import { getDatabaseFilesAsync } from "../../database/client";
+import { settingsRepository } from "../../database/repositories/settingsRepository";
 
 export const exportBackupZipAsync = async (checklists: ChecklistRecord[]): Promise<string> => {
   const zip = new JSZip();
   const dbFiles = await getDatabaseFilesAsync();
+  const providerSettings = await settingsRepository.getProviderSettings();
 
   const dbFileEntries: Array<{ path: string; zipName: string }> = [
     { path: dbFiles.main, zipName: CHECKLIST_DATABASE_FILE_NAME },
@@ -47,13 +49,27 @@ export const exportBackupZipAsync = async (checklists: ChecklistRecord[]): Promi
       {
         exportedAtIso: new Date().toISOString(),
         checklistCount: checklists.length,
-        formatVersion: 2,
+        formatVersion: 3,
       },
       null,
       2,
     ),
   );
   zip.file("checklists.json", JSON.stringify(checklists, null, 2));
+  zip.file(
+    "provider-settings.json",
+    JSON.stringify(
+      {
+        providerName: providerSettings.providerName,
+        providerDocumentId: providerSettings.providerDocumentId,
+        providerPhone: providerSettings.providerPhone,
+        providerEmail: providerSettings.providerEmail,
+        providerAddress: providerSettings.providerAddress,
+      },
+      null,
+      2,
+    ),
+  );
 
   const zipBase64 = await zip.generateAsync({ type: "base64" });
   const outputPath = `${FileSystem.documentDirectory}girofrancis_backup_${Date.now()}.zip`;

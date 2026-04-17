@@ -1,4 +1,5 @@
 import type { ChecklistRecord, ChecklistStatus } from "../../types/checklist";
+import type { UpdateProviderSettingsInput } from "../../types/settings";
 
 const CHECKLIST_STATUSES: ChecklistStatus[] = ["rascunho", "em_transito", "concluido"];
 
@@ -60,4 +61,25 @@ export const parseBackupChecklists = (jsonText: string): ChecklistRecord[] => {
   }
 
   return records;
+};
+
+const isProviderSettings = (value: unknown): value is UpdateProviderSettingsInput => {
+  if (!isObject(value)) return false;
+  if (typeof value.providerName !== "string" || value.providerName.trim().length === 0) return false;
+
+  return (
+    isStringOrNull(value.providerDocumentId) &&
+    isStringOrNull(value.providerPhone) &&
+    isStringOrNull(value.providerEmail) &&
+    isStringOrNull(value.providerAddress)
+  );
+};
+
+export const parseBackupProviderSettings = (jsonText: string): UpdateProviderSettingsInput => {
+  const parsed = JSON.parse(jsonText) as unknown;
+  if (!isProviderSettings(parsed)) {
+    throw new Error("Formato invalido: provider-settings.json com campos ausentes.");
+  }
+
+  return parsed;
 };
