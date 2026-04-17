@@ -11,6 +11,7 @@ import { ChecklistDetailsScreen } from "./src/screens/ChecklistDetailsScreen";
 import { exportAndShareBackupZipAsync } from "./src/services/backup/exportBackupZip";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { importBackupZipAsync } from "./src/services/backup/importBackupZip";
+import { deleteChecklistAsync } from "./src/services/checklist/deleteChecklist";
 
 type AppView = "home" | "create" | "details";
 
@@ -122,6 +123,18 @@ export default function App() {
     }
   }, [loadChecklistsAsync]);
 
+  const handleDeleteChecklistAsync = useCallback(async () => {
+    if (!selectedChecklistId) {
+      throw new Error("Checklist invalido.");
+    }
+
+    await deleteChecklistAsync(selectedChecklistId);
+    setSelectedChecklistId(null);
+    setCurrentView("home");
+    await loadChecklistsAsync();
+    Alert.alert("Checklist excluido", "O checklist e as fotos associadas foram removidos.");
+  }, [loadChecklistsAsync, selectedChecklistId]);
+
   return (
     <SafeAreaProvider>
       <SafeAreaView edges={["top", "right", "left"]} style={styles.container}>
@@ -147,6 +160,7 @@ export default function App() {
           <ChecklistDetailsScreen
             checklist={selectedChecklist}
             onBack={() => setCurrentView("home")}
+            onDeleteChecklist={handleDeleteChecklistAsync}
             onDeliverySave={handleSaveDeliveryAsync}
             onPickupSave={handleSavePickupAsync}
           />

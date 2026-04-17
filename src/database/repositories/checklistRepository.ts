@@ -266,4 +266,14 @@ export const checklistRepository = {
       throw new Error(`Failed to save delivery stage: ${(error as Error).message}`);
     }
   },
+
+  async deleteById(id: string): Promise<void> {
+    const database = await getDatabaseAsync();
+
+    try {
+      await database.runAsync(`DELETE FROM ${CHECKLIST_TABLE_NAME} WHERE id = ?`, [id]);
+    } catch (error) {
+      throw new Error(`Failed to delete checklist: ${(error as Error).message}`);
+    }
+  },
 };

@@ -18,6 +18,7 @@ type PhotoLabelKey = "frente" | "traseira" | "lado_esq" | "lado_dir" | "teto" | 
 interface ChecklistDetailsScreenProps {
   checklist: ChecklistRecord;
   onBack: () => void;
+  onDeleteChecklist: () => Promise<void>;
   onPickupSave: (
     signatureBase64: string | null,
     coordinates: GeoPoint | null,
@@ -61,6 +62,7 @@ const includesStage = (photoPath: string, stage: StageType): boolean => photoPat
 export const ChecklistDetailsScreen = ({
   checklist,
   onBack,
+  onDeleteChecklist,
   onPickupSave,
   onDeliverySave,
 }: ChecklistDetailsScreenProps) => {
@@ -72,6 +74,7 @@ export const ChecklistDetailsScreen = ({
   const [isSavingPickup, setIsSavingPickup] = useState(false);
   const [isSavingDelivery, setIsSavingDelivery] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isDeletingChecklist, setIsDeletingChecklist] = useState(false);
   const [activeStageCamera, setActiveStageCamera] = useState<StageType | null>(null);
   const [activePhotoLabel, setActivePhotoLabel] = useState<PhotoLabelKey>("frente");
   const [pickupDraftPhotos, setPickupDraftPhotos] = useState<string[]>([]);
@@ -171,6 +174,24 @@ export const ChecklistDetailsScreen = ({
     } finally {
       setIsGeneratingPdf(false);
     }
+  };
+
+  const handleDeleteChecklistAsync = async () => {
+    setIsDeletingChecklist(true);
+    try {
+      await onDeleteChecklist();
+    } catch (error) {
+      Alert.alert("Erro ao excluir", (error as Error).message);
+    } finally {
+      setIsDeletingChecklist(false);
+    }
+  };
+
+  const handleDeletePress = () => {
+    Alert.alert("Excluir checklist", "Essa acao remove o checklist e as fotos associadas. Deseja continuar?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Excluir", style: "destructive", onPress: () => void handleDeleteChecklistAsync() },
+    ]);
   };
 
   const renderPhotoChips = () => {
@@ -308,6 +329,16 @@ export const ChecklistDetailsScreen = ({
         label={isGeneratingPdf ? "Gerando PDF..." : "Gerar e compartilhar PDF"}
         onPress={handleGeneratePdfAsync}
       />
+
+      <Pressable
+        disabled={isDeletingChecklist}
+        onPress={handleDeletePress}
+        style={[styles.deleteButton, isDeletingChecklist ? styles.deleteButtonDisabled : undefined]}
+      >
+        <Text style={styles.deleteButtonText}>
+          {isDeletingChecklist ? "Excluindo checklist..." : "Excluir Checklist"}
+        </Text>
+      </Pressable>
     </ScrollView>
   );
 };
@@ -408,5 +439,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: APP_COLORS.neutralBorder,
+  },
+  deleteButton: {
+    minHeight: 52,
+    borderRadius: 12,
+    backgroundColor: APP_COLORS.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  deleteButtonDisabled: {
+    opacity: 0.6,
+  },
+  deleteButtonText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });
