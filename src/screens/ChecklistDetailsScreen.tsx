@@ -12,7 +12,7 @@ import { generateChecklistPdfAsync } from "../services/pdf/generateChecklistPdf"
 import * as Sharing from "expo-sharing";
 
 type StageType = "pickup" | "delivery";
-type PhotoLabelKey = "frente" | "traseira" | "lado_esq" | "lado_dir" | "teto" | "danos";
+type PhotoLabelKey = "frente" | "traseira" | "lado_esq" | "lado_dir" | "teto" | "interior" | "danos";
 
 interface ChecklistDetailsScreenProps {
   checklist: ChecklistRecord;
@@ -37,6 +37,7 @@ const PHOTO_LABELS: Array<{ key: PhotoLabelKey; label: string }> = [
   { key: "lado_esq", label: "Lado Esq" },
   { key: "lado_dir", label: "Lado Dir" },
   { key: "teto", label: "Teto" },
+  { key: "interior", label: "Interior" },
   { key: "danos", label: "Danos" },
 ];
 
@@ -407,4 +408,3 @@ const styles = StyleSheet.create({
     borderColor: APP_COLORS.neutralBorder,
   },
 });
-

@@ -24,7 +24,25 @@ const buildPdfName = (checklist: ChecklistRecord): string => {
 };
 
 export const generateChecklistPdfAsync = async (checklist: ChecklistRecord): Promise<string> => {
-  const html = buildChecklistHtml(checklist);
+  const photoSrcMap: Record<string, string> = {};
+
+  for (const photoPath of checklist.photoPaths) {
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(photoPath);
+      if (!fileInfo.exists) {
+        continue;
+      }
+
+      const base64 = await FileSystem.readAsStringAsync(photoPath, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      photoSrcMap[photoPath] = `data:image/jpeg;base64,${base64}`;
+    } catch {
+      // Skip a single broken image but keep PDF generation available.
+    }
+  }
+
+  const html = buildChecklistHtml(checklist, photoSrcMap);
   const fileName = buildPdfName(checklist);
   const outputPath = `${FileSystem.documentDirectory}${fileName}`;
 

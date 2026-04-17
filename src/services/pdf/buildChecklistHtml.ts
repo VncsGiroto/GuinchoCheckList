@@ -16,7 +16,7 @@ const renderCoordinates = (latitude: number | undefined, longitude: number | und
   return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
 };
 
-const PHOTO_ORDER = ["frente", "traseira", "lado_esq", "lado_dir", "teto", "danos"] as const;
+const PHOTO_ORDER = ["frente", "traseira", "lado_esq", "lado_dir", "teto", "interior", "danos"] as const;
 
 const extractPhotoLabel = (photoPath: string): string => {
   const fileName = photoPath.split("/").pop()?.toLowerCase() ?? "";
@@ -31,7 +31,11 @@ const extractPhotoLabel = (photoPath: string): string => {
   return match.charAt(0).toUpperCase() + match.slice(1);
 };
 
-const renderPhotosGrid = (photoPaths: string[]): string => {
+const resolvePhotoSrc = (photoPath: string, photoSrcMap: Record<string, string>): string => {
+  return photoSrcMap[photoPath] ?? photoPath;
+};
+
+const renderPhotosGrid = (photoPaths: string[], photoSrcMap: Record<string, string>): string => {
   if (photoPaths.length === 0) {
     return "<p>Sem fotos registradas.</p>";
   }
@@ -42,7 +46,7 @@ const renderPhotosGrid = (photoPaths: string[]): string => {
         .map(
           (photoPath) => `
             <div class="photo-item">
-              <img src="${photoPath}" alt="${extractPhotoLabel(photoPath)}" />
+              <img src="${resolvePhotoSrc(photoPath, photoSrcMap)}" alt="${extractPhotoLabel(photoPath)}" />
               <p>${extractPhotoLabel(photoPath)}</p>
             </div>
           `,
@@ -52,7 +56,7 @@ const renderPhotosGrid = (photoPaths: string[]): string => {
   `;
 };
 
-export const buildChecklistHtml = (checklist: ChecklistRecord): string => {
+export const buildChecklistHtml = (checklist: ChecklistRecord, photoSrcMap: Record<string, string>): string => {
   return `
 <!doctype html>
 <html>
@@ -137,10 +141,16 @@ export const buildChecklistHtml = (checklist: ChecklistRecord): string => {
     </table>
 
     <h2>Fotos da Coleta</h2>
-    ${renderPhotosGrid(checklist.photoPaths.filter((photoPath) => photoPath.includes("_pickup_")))}
+    ${renderPhotosGrid(
+      checklist.photoPaths.filter((photoPath) => photoPath.includes("_pickup_")),
+      photoSrcMap,
+    )}
 
     <h2>Fotos da Entrega</h2>
-    ${renderPhotosGrid(checklist.photoPaths.filter((photoPath) => photoPath.includes("_delivery_")))}
+    ${renderPhotosGrid(
+      checklist.photoPaths.filter((photoPath) => photoPath.includes("_delivery_")),
+      photoSrcMap,
+    )}
 
     <h2>Assinaturas e Auditoria</h2>
     <div class="signature-container">
