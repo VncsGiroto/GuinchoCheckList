@@ -77,6 +77,20 @@ const serializeCoordinates = (latitude: number, longitude: number): string => {
   return `${latitude},${longitude}`;
 };
 
+const serializeCoordinatesNullable = (
+  coordinates: { latitude: number; longitude: number } | null,
+): string | null => {
+  if (!coordinates) {
+    return null;
+  }
+
+  return serializeCoordinates(coordinates.latitude, coordinates.longitude);
+};
+
+const buildChecklistId = (): string => {
+  return `cl_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+};
+
 const buildNowIso = (): string => new Date().toISOString();
 
 const updatePhotoUnion = (currentPaths: string[], nextPaths: string[]): string[] => {
@@ -87,7 +101,7 @@ const updatePhotoUnion = (currentPaths: string[], nextPaths: string[]): string[]
 export const checklistRepository = {
   async create(input: CreateChecklistInput): Promise<ChecklistRecord> {
     const database = await getDatabaseAsync();
-    const checklistId = crypto.randomUUID();
+    const checklistId = buildChecklistId();
     const nowIso = buildNowIso();
 
     try {
@@ -198,7 +212,7 @@ export const checklistRepository = {
         `,
         [
           input.signatureBase64,
-          serializeCoordinates(input.coordinates.latitude, input.coordinates.longitude),
+          serializeCoordinatesNullable(input.coordinates),
           input.timestampIso,
           JSON.stringify(nextPhotos),
           "em_transito",
@@ -240,7 +254,7 @@ export const checklistRepository = {
         `,
         [
           input.signatureBase64,
-          serializeCoordinates(input.coordinates.latitude, input.coordinates.longitude),
+          serializeCoordinatesNullable(input.coordinates),
           input.timestampIso,
           JSON.stringify(nextPhotos),
           "concluido",
@@ -253,4 +267,3 @@ export const checklistRepository = {
     }
   },
 };
-

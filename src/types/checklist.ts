@@ -46,7 +46,7 @@ export interface CreateChecklistInput {
 export interface SavePickupInput {
   checklistId: string;
   signatureBase64: string | null;
-  coordinates: GeoPoint;
+  coordinates: GeoPoint | null;
   timestampIso: string;
   photoPaths: string[];
 }
@@ -54,8 +54,7 @@ export interface SavePickupInput {
 export interface SaveDeliveryInput {
   checklistId: string;
   signatureBase64: string | null;
-  coordinates: GeoPoint;
+  coordinates: GeoPoint | null;
   timestampIso: string;
   photoPaths: string[];
 }
-
