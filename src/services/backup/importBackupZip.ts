@@ -41,8 +41,6 @@ export const importBackupZipAsync = async (): Promise<ImportBackupResult> => {
   const zip = await JSZip.loadAsync(zipBase64, { base64: true });
 
   const dbFiles = await getDatabaseFilesAsync();
-  const mainDirectory = dbFiles.main.split("/").slice(0, -1).join("/");
-  await ensureDirectoryAsync(mainDirectory);
   await ensureDirectoryAsync(CHECKLIST_PHOTOS_DIRECTORY);
 
   let restoredDatabase = false;

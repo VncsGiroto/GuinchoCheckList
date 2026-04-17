@@ -1,5 +1,6 @@
 import * as Print from "expo-print";
 import * as FileSystem from "expo-file-system/legacy";
+import { Image } from "react-native";
 import type { ChecklistRecord } from "../../types/checklist";
 import { buildChecklistHtml } from "./buildChecklistHtml";
 
@@ -23,6 +24,8 @@ const buildPdfName = (checklist: ChecklistRecord): string => {
   return `${yyyy}${mm}${dd}_${hh}${min}_${slugifyCustomerName(checklist.customer.name)}.pdf`;
 };
 
+const logoSource = Image.resolveAssetSource(require("../../assets/img/logo.png"));
+
 export const generateChecklistPdfAsync = async (checklist: ChecklistRecord): Promise<string> => {
   const photoSrcMap: Record<string, string> = {};
 
@@ -42,7 +45,7 @@ export const generateChecklistPdfAsync = async (checklist: ChecklistRecord): Pro
     }
   }
 
-  const html = buildChecklistHtml(checklist, photoSrcMap);
+  const html = buildChecklistHtml(checklist, photoSrcMap, logoSource?.uri ?? null);
   const fileName = buildPdfName(checklist);
   const outputPath = `${FileSystem.documentDirectory}${fileName}`;
 

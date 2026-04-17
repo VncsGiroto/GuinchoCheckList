@@ -1,4 +1,4 @@
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import type { ChecklistRecord } from "../types/checklist";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { StatusChip } from "../components/StatusChip";
@@ -28,7 +28,10 @@ export const HomeScreen = ({
   return (
     <View style={styles.container}>
       <View style={styles.headerCard}>
-        <Text style={styles.title}>Girofrancis Checklist</Text>
+        <View style={styles.brandRow}>
+          <Image source={require("../assets/img/logo.png")} style={styles.logo} resizeMode="contain" />
+          <Text style={styles.title}>Girofrancis Checklist</Text>
+        </View>
         <Text style={styles.subtitle}>Checklist de coleta e entrega com rastreabilidade offline.</Text>
         <View style={styles.statusRow}>
           <StatusChip label="Offline Ready" variant="success" />
@@ -85,6 +88,17 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     color: APP_COLORS.text,
+    flex: 1,
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  logo: {
+    width: 46,
+    height: 46,
+    borderRadius: 8,
   },
   subtitle: {
     fontSize: 14,

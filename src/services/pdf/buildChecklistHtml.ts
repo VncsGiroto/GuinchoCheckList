@@ -56,7 +56,11 @@ const renderPhotosGrid = (photoPaths: string[], photoSrcMap: Record<string, stri
   `;
 };
 
-export const buildChecklistHtml = (checklist: ChecklistRecord, photoSrcMap: Record<string, string>): string => {
+export const buildChecklistHtml = (
+  checklist: ChecklistRecord,
+  photoSrcMap: Record<string, string>,
+  logoDataUri: string | null,
+): string => {
   return `
 <!doctype html>
 <html>
@@ -74,7 +78,18 @@ export const buildChecklistHtml = (checklist: ChecklistRecord, photoSrcMap: Reco
       .header {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         margin-bottom: 16px;
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .logo {
+        width: 110px;
+        height: 44px;
+        object-fit: contain;
       }
       .table {
         width: 100%;
@@ -113,9 +128,12 @@ export const buildChecklistHtml = (checklist: ChecklistRecord, photoSrcMap: Reco
   </head>
   <body>
     <div class="header">
-      <div>
+      <div class="header-left">
+        ${logoDataUri ? `<img class="logo" src="${logoDataUri}" alt="Logo Girofrancis" />` : ""}
+        <div>
         <h1>Girofrancis Checklist</h1>
         <p>Relatorio de Vistoria</p>
+        </div>
       </div>
       <div>
         <p><strong>Prestador:</strong> Girofrancis Guinchos</p>
