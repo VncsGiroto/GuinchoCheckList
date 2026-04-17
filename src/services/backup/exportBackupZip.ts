@@ -47,11 +47,13 @@ export const exportBackupZipAsync = async (checklists: ChecklistRecord[]): Promi
       {
         exportedAtIso: new Date().toISOString(),
         checklistCount: checklists.length,
+        formatVersion: 2,
       },
       null,
       2,
     ),
   );
+  zip.file("checklists.json", JSON.stringify(checklists, null, 2));
 
   const zipBase64 = await zip.generateAsync({ type: "base64" });
   const outputPath = `${FileSystem.documentDirectory}girofrancis_backup_${Date.now()}.zip`;

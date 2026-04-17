@@ -1,4 +1,9 @@
-import { getDatabaseAsync } from "../client";
+import {
+  getDatabaseAsync,
+  initializeDatabaseAsync,
+  resetDatabaseConnectionAsync,
+} from "../client";
+import { isDatabaseNullPointerError } from "../databaseError";
 import { CHECKLIST_TABLE_NAME } from "../schema";
 import type {
   ChecklistRecord,
@@ -30,6 +35,32 @@ interface ChecklistRow {
   created_at: string;
   updated_at: string;
 }
+
+const INSERT_CHECKLIST_SQL = `
+  INSERT INTO ${CHECKLIST_TABLE_NAME} (
+    id,
+    customer_name,
+    customer_document_id,
+    customer_phone,
+    vehicle_plate,
+    vehicle_brand,
+    vehicle_model,
+    vehicle_color,
+    vehicle_year,
+    vehicle_notes,
+    pickup_signature,
+    delivery_signature,
+    pickup_lat_long,
+    delivery_lat_long,
+    pickup_timestamp,
+    delivery_timestamp,
+    photos,
+    status,
+    created_at,
+    updated_at
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
 const parseCoordinates = (rawValue: string | null) => {
   if (!rawValue) {
@@ -98,49 +129,86 @@ const updatePhotoUnion = (currentPaths: string[], nextPaths: string[]): string[]
   return [...merged];
 };
 
+const toChecklistInsertParams = (record: ChecklistRecord): Array<string | null> => {
+  return [
+    record.id,
+    record.customer.name,
+    record.customer.documentId,
+    record.customer.phone,
+    record.vehicle.plate,
+    record.vehicle.brand,
+    record.vehicle.model,
+    record.vehicle.color,
+    record.vehicle.year,
+    record.vehicle.notes,
+    record.pickup.signatureBase64,
+    record.delivery.signatureBase64,
+    serializeCoordinatesNullable(record.pickup.coordinates),
+    serializeCoordinatesNullable(record.delivery.coordinates),
+    record.pickup.timestampIso,
+    record.delivery.timestampIso,
+    JSON.stringify(record.photoPaths),
+    record.status,
+    record.createdAtIso,
+    record.updatedAtIso,
+  ];
+};
+
+const executeWithDatabaseRecoveryAsync = async <T>(
+  operation: () => Promise<T>,
+  operationName: string,
+): Promise<T> => {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!isDatabaseNullPointerError(error)) {
+      throw new Error(`${operationName}: ${(error as Error).message}`);
+    }
+
+    await resetDatabaseConnectionAsync();
+    await initializeDatabaseAsync();
+
+    try {
+      return await operation();
+    } catch (retryError) {
+      throw new Error(`${operationName}: ${(retryError as Error).message}`);
+    }
+  }
+};
+
 export const checklistRepository = {
   async create(input: CreateChecklistInput): Promise<ChecklistRecord> {
-    const database = await getDatabaseAsync();
     const checklistId = buildChecklistId();
     const nowIso = buildNowIso();
 
-    try {
+    return executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
+      const draftRecord: ChecklistRecord = {
+        id: checklistId,
+        status: "rascunho",
+        customer: {
+          name: input.customer.name,
+          documentId: input.customer.documentId,
+          phone: input.customer.phone,
+        },
+        vehicle: {
+          plate: input.vehicle.plate,
+          brand: input.vehicle.brand,
+          model: input.vehicle.model,
+          color: input.vehicle.color,
+          year: input.vehicle.year,
+          notes: input.vehicle.notes,
+        },
+        photoPaths: [],
+        pickup: { signatureBase64: null, coordinates: null, timestampIso: null },
+        delivery: { signatureBase64: null, coordinates: null, timestampIso: null },
+        createdAtIso: nowIso,
+        updatedAtIso: nowIso,
+      };
+
       await database.runAsync(
-        `
-          INSERT INTO ${CHECKLIST_TABLE_NAME} (
-            id,
-            customer_name,
-            customer_document_id,
-            customer_phone,
-            vehicle_plate,
-            vehicle_brand,
-            vehicle_model,
-            vehicle_color,
-            vehicle_year,
-            vehicle_notes,
-            photos,
-            status,
-            created_at,
-            updated_at
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-        [
-          checklistId,
-          input.customer.name,
-          input.customer.documentId,
-          input.customer.phone,
-          input.vehicle.plate,
-          input.vehicle.brand,
-          input.vehicle.model,
-          input.vehicle.color,
-          input.vehicle.year,
-          input.vehicle.notes,
-          JSON.stringify([]),
-          "rascunho",
-          nowIso,
-          nowIso,
-        ],
+        INSERT_CHECKLIST_SQL,
+        toChecklistInsertParams(draftRecord),
       );
 
       const created = await this.findById(checklistId);
@@ -149,55 +217,51 @@ export const checklistRepository = {
       }
 
       return created;
-    } catch (error) {
-      throw new Error(`Failed to create checklist: ${(error as Error).message}`);
-    }
+    }, "Failed to create checklist");
   },
 
   async findById(id: string): Promise<ChecklistRecord | null> {
-    const database = await getDatabaseAsync();
-
-    try {
+    return executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
       const row = await database.getFirstAsync<ChecklistRow>(
         `SELECT * FROM ${CHECKLIST_TABLE_NAME} WHERE id = ? LIMIT 1`,
         [id],
       );
 
       return row ? toRecord(row) : null;
-    } catch (error) {
-      throw new Error(`Failed to fetch checklist by id: ${(error as Error).message}`);
-    }
+    }, "Failed to fetch checklist by id");
   },
 
   async list(): Promise<ChecklistRecord[]> {
-    const database = await getDatabaseAsync();
-
-    try {
+    return executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
       const rows = await database.getAllAsync<ChecklistRow>(
         `SELECT * FROM ${CHECKLIST_TABLE_NAME} ORDER BY created_at DESC`,
       );
 
       return rows.map(toRecord);
-    } catch (error) {
-      throw new Error(`Failed to list checklists: ${(error as Error).message}`);
-    }
+    }, "Failed to list checklists");
   },
 
   async savePickup(input: SavePickupInput): Promise<void> {
-    const database = await getDatabaseAsync();
-    const checklist = await this.findById(input.checklistId);
+    await executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
+      const checklist = await this.findById(input.checklistId);
 
-    if (!checklist) {
-      throw new Error("Checklist does not exist.");
-    }
+      if (!checklist) {
+        throw new Error("Checklist does not exist.");
+      }
 
-    if (checklist.pickup.signatureBase64 || checklist.status === "em_transito" || checklist.status === "concluido") {
-      throw new Error("Pickup stage is locked and cannot be edited.");
-    }
+      if (
+        checklist.pickup.signatureBase64 ||
+        checklist.status === "em_transito" ||
+        checklist.status === "concluido"
+      ) {
+        throw new Error("Pickup stage is locked and cannot be edited.");
+      }
 
-    const nextPhotos = updatePhotoUnion(checklist.photoPaths, input.photoPaths);
+      const nextPhotos = updatePhotoUnion(checklist.photoPaths, input.photoPaths);
 
-    try {
       await database.runAsync(
         `
           UPDATE ${CHECKLIST_TABLE_NAME}
@@ -220,26 +284,24 @@ export const checklistRepository = {
           input.checklistId,
         ],
       );
-    } catch (error) {
-      throw new Error(`Failed to save pickup stage: ${(error as Error).message}`);
-    }
+    }, "Failed to save pickup stage");
   },
 
   async saveDelivery(input: SaveDeliveryInput): Promise<void> {
-    const database = await getDatabaseAsync();
-    const checklist = await this.findById(input.checklistId);
+    await executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
+      const checklist = await this.findById(input.checklistId);
 
-    if (!checklist) {
-      throw new Error("Checklist does not exist.");
-    }
+      if (!checklist) {
+        throw new Error("Checklist does not exist.");
+      }
 
-    if (checklist.status === "concluido") {
-      throw new Error("Delivery stage is locked and cannot be edited.");
-    }
+      if (checklist.status === "concluido") {
+        throw new Error("Delivery stage is locked and cannot be edited.");
+      }
 
-    const nextPhotos = updatePhotoUnion(checklist.photoPaths, input.photoPaths);
+      const nextPhotos = updatePhotoUnion(checklist.photoPaths, input.photoPaths);
 
-    try {
       await database.runAsync(
         `
           UPDATE ${CHECKLIST_TABLE_NAME}
@@ -262,18 +324,27 @@ export const checklistRepository = {
           input.checklistId,
         ],
       );
-    } catch (error) {
-      throw new Error(`Failed to save delivery stage: ${(error as Error).message}`);
-    }
+    }, "Failed to save delivery stage");
   },
 
   async deleteById(id: string): Promise<void> {
-    const database = await getDatabaseAsync();
-
-    try {
+    await executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
       await database.runAsync(`DELETE FROM ${CHECKLIST_TABLE_NAME} WHERE id = ?`, [id]);
-    } catch (error) {
-      throw new Error(`Failed to delete checklist: ${(error as Error).message}`);
-    }
+    }, "Failed to delete checklist");
+  },
+
+  async replaceAll(records: ChecklistRecord[]): Promise<void> {
+    await executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
+
+      await database.withTransactionAsync(async () => {
+        await database.runAsync(`DELETE FROM ${CHECKLIST_TABLE_NAME}`);
+
+        for (const record of records) {
+          await database.runAsync(INSERT_CHECKLIST_SQL, toChecklistInsertParams(record));
+        }
+      });
+    }, "Failed to replace checklist data");
   },
 };
