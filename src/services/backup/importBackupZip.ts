@@ -21,6 +21,20 @@ const ensureDirectoryAsync = async (directoryPath: string) => {
   }
 };
 
+const remapPhotoPath = (oldPath: string): string => {
+  const fileName = oldPath.split("/").pop()?.trim() ?? "";
+  if (!fileName) return oldPath;
+  return `${CHECKLIST_PHOTOS_DIRECTORY}/${fileName}`;
+};
+
+const cleanPhotosDirectoryAsync = async (): Promise<void> => {
+  await ensureDirectoryAsync(CHECKLIST_PHOTOS_DIRECTORY);
+  const entries = await FileSystem.readDirectoryAsync(CHECKLIST_PHOTOS_DIRECTORY);
+  for (const entry of entries) {
+    await FileSystem.deleteAsync(`${CHECKLIST_PHOTOS_DIRECTORY}/${entry}`, { idempotent: true });
+  }
+};
+
 export const importBackupZipAsync = async (): Promise<ImportBackupResult> => {
   const picked = await DocumentPicker.getDocumentAsync({
     type: "application/zip",
@@ -36,40 +50,86 @@ export const importBackupZipAsync = async (): Promise<ImportBackupResult> => {
   const zipBase64 = await FileSystem.readAsStringAsync(zipUri, { encoding: FileSystem.EncodingType.Base64 });
   const zip = await JSZip.loadAsync(zipBase64, { base64: true });
 
-  await ensureDirectoryAsync(CHECKLIST_PHOTOS_DIRECTORY);
-
-  let restoredDatabase = false;
-  let restoredPhotosCount = 0;
-
   const checklistsEntry = zip.file("checklists.json");
   const providerSettingsEntry = zip.file("provider-settings.json");
 
-  await initializeDatabaseAsync();
+  const zipPhotoNames = new Set<string>();
+  for (const zipPath of Object.keys(zip.files)) {
+    if (zip.files[zipPath].dir) continue;
+    if (zipPath.toLowerCase().startsWith("photos/")) {
+      const fileName = zipPath.split("/").pop()?.trim() ?? "";
+      if (fileName) zipPhotoNames.add(fileName);
+    }
+  }
+
+  let parsedRecords: Awaited<ReturnType<typeof parseBackupChecklists>> | null = null;
+  let parsedSettings: Awaited<ReturnType<typeof parseBackupProviderSettings>> | null = null;
 
   if (providerSettingsEntry) {
     const jsonText = await providerSettingsEntry.async("text");
-    const settings = parseBackupProviderSettings(jsonText);
-    await settingsRepository.replaceProviderSettings(settings);
+    parsedSettings = parseBackupProviderSettings(jsonText);
   }
 
   if (checklistsEntry) {
     const jsonText = await checklistsEntry.async("text");
-    const records = parseBackupChecklists(jsonText);
-    await checklistRepository.replaceAll(records);
-    restoredDatabase = true;
+    parsedRecords = parseBackupChecklists(jsonText);
+    const expectedNames = new Set<string>();
+    for (const record of parsedRecords) {
+      for (const photoPath of record.photoPaths) {
+        const fileName = photoPath.split("/").pop()?.trim() ?? "";
+        if (fileName) expectedNames.add(fileName);
+      }
+    }
+    const missing = [...expectedNames].filter((name) => !zipPhotoNames.has(name));
+    if (missing.length > 0) {
+      throw new Error(`Backup inconsistente: ${missing.length} foto(s) referenciada(s) em checklists.json nao encontrada(s) em photos/ — ${missing.join(", ")}`);
+    }
   } else if (zip.file(`database/${CHECKLIST_DATABASE_FILE_NAME}`)) {
-    throw new Error(
-      "Backup legado detectado (somente .db). Exporte um novo backup nesta versao para restauracao segura.",
-    );
+    throw new Error("Backup legado detectado (somente .db). Exporte um novo backup nesta versao para restauracao segura.");
   }
 
-  for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
-    if (zipEntry.dir) {
-      continue;
-    }
+  await initializeDatabaseAsync();
 
+  if (parsedRecords) {
+    const remapped = parsedRecords.map((record) => ({
+      ...record,
+      photoPaths: record.photoPaths.map(remapPhotoPath),
+    }));
+    const hasPhotosToRestore = zipPhotoNames.size > 0 || remapped.some((r) => r.photoPaths.length > 0);
+    if (hasPhotosToRestore) {
+      await cleanPhotosDirectoryAsync();
+    }
+    let restoredPhotosCount = 0;
+    for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
+      if (zipEntry.dir) continue;
+      if (zipPath.toLowerCase().startsWith("photos/")) {
+        const photoBase64 = await zipEntry.async("base64");
+        if (!photoBase64) continue;
+        const fileName = zipPath.split("/").pop() ?? `photo_${Date.now()}.jpg`;
+        const photoOutputPath = `${CHECKLIST_PHOTOS_DIRECTORY}/${fileName}`;
+        await FileSystem.writeAsStringAsync(photoOutputPath, photoBase64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        restoredPhotosCount += 1;
+      }
+    }
+    if (parsedSettings) {
+      await settingsRepository.replaceProviderSettings(parsedSettings);
+    }
+    await checklistRepository.replaceAll(remapped);
+    if (!remapped.length && restoredPhotosCount === 0 && !parsedSettings) {
+      throw new Error("Backup invalido: nenhum dado de checklist ou foto foi encontrado.");
+    }
+    return { restoredDatabase: true, restoredPhotosCount };
+  }
+
+  await ensureDirectoryAsync(CHECKLIST_PHOTOS_DIRECTORY);
+  let restoredPhotosCount = 0;
+  for (const [zipPath, zipEntry] of Object.entries(zip.files)) {
+    if (zipEntry.dir) continue;
     if (zipPath.toLowerCase().startsWith("photos/")) {
       const photoBase64 = await zipEntry.async("base64");
+      if (!photoBase64) continue;
       const fileName = zipPath.split("/").pop() ?? `photo_${Date.now()}.jpg`;
       const photoOutputPath = `${CHECKLIST_PHOTOS_DIRECTORY}/${fileName}`;
       await FileSystem.writeAsStringAsync(photoOutputPath, photoBase64, {
@@ -79,9 +139,13 @@ export const importBackupZipAsync = async (): Promise<ImportBackupResult> => {
     }
   }
 
-  if (!restoredDatabase && restoredPhotosCount === 0) {
+  if (parsedSettings) {
+    await settingsRepository.replaceProviderSettings(parsedSettings);
+  }
+
+  if (restoredPhotosCount === 0 && !parsedSettings) {
     throw new Error("Backup invalido: nenhum dado de checklist ou foto foi encontrado.");
   }
 
-  return { restoredDatabase, restoredPhotosCount };
+  return { restoredDatabase: false, restoredPhotosCount };
 };

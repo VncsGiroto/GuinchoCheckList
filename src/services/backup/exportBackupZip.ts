@@ -43,6 +43,16 @@ export const exportBackupZipAsync = async (checklists: ChecklistRecord[]): Promi
     zip.file(`photos/${fileName}`, photoBase64, { base64: true });
   }
 
+  const toRelativePhotoPath = (absPath: string): string => {
+    const fileName = absPath.split("/").pop()?.trim() ?? "";
+    return fileName ? `photos/${fileName}` : absPath;
+  };
+
+  const exportRecords = checklists.map((record) => ({
+    ...record,
+    photoPaths: record.photoPaths.map(toRelativePhotoPath),
+  }));
+
   zip.file(
     "manifest.json",
     JSON.stringify(
@@ -55,7 +65,7 @@ export const exportBackupZipAsync = async (checklists: ChecklistRecord[]): Promi
       2,
     ),
   );
-  zip.file("checklists.json", JSON.stringify(checklists, null, 2));
+  zip.file("checklists.json", JSON.stringify(exportRecords, null, 2));
   zip.file(
     "provider-settings.json",
     JSON.stringify(

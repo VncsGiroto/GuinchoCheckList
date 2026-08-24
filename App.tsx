@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { Alert, StyleSheet } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { initializeDatabaseAsync } from "./src/database/client";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -20,6 +20,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>("home");
   const [checklists, setChecklists] = useState<ChecklistRecord[]>([]);
   const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const isBackupBusy = isExporting || isImporting;
 
   const loadChecklistsAsync = useCallback(async () => {
     const list = await checklistRepository.list();
@@ -110,15 +113,21 @@ export default function App() {
   );
 
   const handleExportBackupAsync = useCallback(async () => {
+    if (isBackupBusy) return;
+    setIsExporting(true);
     try {
       await exportAndShareBackupZipAsync(checklists);
       Alert.alert("Backup", "Backup exportado com sucesso.");
     } catch (error) {
       Alert.alert("Erro no backup", (error as Error).message);
+    } finally {
+      setIsExporting(false);
     }
-  }, [checklists]);
+  }, [checklists, isBackupBusy]);
 
   const handleImportBackupAsync = useCallback(async () => {
+    if (isBackupBusy) return;
+    setIsImporting(true);
     try {
       const result = await importBackupZipAsync();
       setSelectedChecklistId(null);
@@ -129,9 +138,14 @@ export default function App() {
         `Banco: ${result.restoredDatabase ? "restaurado" : "nao encontrado"}\nFotos restauradas: ${result.restoredPhotosCount}`,
       );
     } catch (error) {
-      Alert.alert("Erro ao importar backup", (error as Error).message);
+      const message = (error as Error).message;
+      if (message !== "Importacao cancelada.") {
+        Alert.alert("Erro ao importar backup", message);
+      }
+    } finally {
+      setIsImporting(false);
     }
-  }, [loadChecklistsAsync]);
+  }, [loadChecklistsAsync, isBackupBusy]);
 
   const handleDeleteChecklistAsync = useCallback(async () => {
     if (!selectedChecklistId) {
@@ -179,6 +193,14 @@ export default function App() {
 
         {currentView === "settings" ? <SettingsScreen onBack={() => setCurrentView("home")} /> : null}
       </SafeAreaView>
+      {isBackupBusy && (
+        <View style={styles.backupOverlay} pointerEvents="auto">
+          <View style={styles.backupCard}>
+            <ActivityIndicator size="large" color={APP_COLORS.primary} />
+            <Text style={styles.backupText}>{isExporting ? "Exportando backup..." : "Importando backup..."}</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaProvider>
   );
 }
@@ -187,5 +209,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: APP_COLORS.background,
+  },
+  backupOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 999,
+  },
+  backupCard: {
+    backgroundColor: APP_COLORS.card,
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 28,
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderColor: APP_COLORS.neutralBorder,
+  },
+  backupText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: APP_COLORS.text,
   },
 });
