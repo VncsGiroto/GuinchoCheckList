@@ -59,6 +59,8 @@ export default function App() {
       coordinates: GeoPoint | null,
       timestampIso: string,
       photoPaths: string[],
+      receiverName: string | null,
+      receiverDocumentId: string | null,
     ) => {
       if (!selectedChecklistId) {
         return;
@@ -70,6 +72,8 @@ export default function App() {
         coordinates,
         timestampIso,
         photoPaths,
+        receiverName,
+        receiverDocumentId,
       });
 
       await loadChecklistsAsync();
@@ -83,6 +87,8 @@ export default function App() {
       coordinates: GeoPoint | null,
       timestampIso: string,
       photoPaths: string[],
+      receiverName: string | null,
+      receiverDocumentId: string | null,
     ) => {
       if (!selectedChecklistId) {
         return;
@@ -94,6 +100,8 @@ export default function App() {
         coordinates,
         timestampIso,
         photoPaths,
+        receiverName,
+        receiverDocumentId,
       });
 
       await loadChecklistsAsync();

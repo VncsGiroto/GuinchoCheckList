@@ -24,12 +24,16 @@ interface ChecklistDetailsScreenProps {
     coordinates: GeoPoint | null,
     timestampIso: string,
     photoPaths: string[],
+    receiverName: string | null,
+    receiverDocumentId: string | null,
   ) => Promise<void>;
   onDeliverySave: (
     signatureBase64: string | null,
     coordinates: GeoPoint | null,
     timestampIso: string,
     photoPaths: string[],
+    receiverName: string | null,
+    receiverDocumentId: string | null,
   ) => Promise<void>;
 }
 
@@ -71,6 +75,10 @@ export const ChecklistDetailsScreen = ({
   const { hasCameraPermission, requestCameraPermission, compressAndPersistPhotoAsync, isSavingPhoto } = usePhotoCapture();
   const [pickupSignature, setPickupSignature] = useState<string | null>(checklist.pickup.signatureBase64);
   const [deliverySignature, setDeliverySignature] = useState<string | null>(checklist.delivery.signatureBase64);
+  const [pickupReceiverName, setPickupReceiverName] = useState(checklist.pickup.receiverName ?? "");
+  const [pickupReceiverDocumentId, setPickupReceiverDocumentId] = useState(checklist.pickup.receiverDocumentId ?? "");
+  const [deliveryReceiverName, setDeliveryReceiverName] = useState(checklist.delivery.receiverName ?? "");
+  const [deliveryReceiverDocumentId, setDeliveryReceiverDocumentId] = useState(checklist.delivery.receiverDocumentId ?? "");
   const [isSavingPickup, setIsSavingPickup] = useState(false);
   const [isSavingDelivery, setIsSavingDelivery] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -83,7 +91,11 @@ export const ChecklistDetailsScreen = ({
   useEffect(() => {
     setPickupSignature(checklist.pickup.signatureBase64);
     setDeliverySignature(checklist.delivery.signatureBase64);
-  }, [checklist.delivery.signatureBase64, checklist.pickup.signatureBase64, checklist.id]);
+    setPickupReceiverName(checklist.pickup.receiverName ?? "");
+    setPickupReceiverDocumentId(checklist.pickup.receiverDocumentId ?? "");
+    setDeliveryReceiverName(checklist.delivery.receiverName ?? "");
+    setDeliveryReceiverDocumentId(checklist.delivery.receiverDocumentId ?? "");
+  }, [checklist.delivery.signatureBase64, checklist.delivery.receiverName, checklist.delivery.receiverDocumentId, checklist.pickup.signatureBase64, checklist.pickup.receiverName, checklist.pickup.receiverDocumentId, checklist.id]);
 
   const isPickupLocked = useMemo(() => {
     return checklist.status !== "rascunho" || Boolean(checklist.pickup.signatureBase64);
@@ -132,7 +144,14 @@ export const ChecklistDetailsScreen = ({
     try {
       const coordinates = await captureLocationAsync();
       const timestampIso = new Date().toISOString();
-      await onPickupSave(pickupSignature, coordinates, timestampIso, pickupDraftPhotos);
+      await onPickupSave(
+        pickupSignature,
+        coordinates,
+        timestampIso,
+        pickupDraftPhotos,
+        pickupReceiverName.trim() || null,
+        pickupReceiverDocumentId.trim() || null,
+      );
       setPickupDraftPhotos([]);
       setActiveStageCamera(null);
       Alert.alert("Coleta salva", "GPS, horario e fotos da coleta foram registrados.");
@@ -148,7 +167,14 @@ export const ChecklistDetailsScreen = ({
     try {
       const coordinates = await captureLocationAsync();
       const timestampIso = new Date().toISOString();
-      await onDeliverySave(deliverySignature, coordinates, timestampIso, deliveryDraftPhotos);
+      await onDeliverySave(
+        deliverySignature,
+        coordinates,
+        timestampIso,
+        deliveryDraftPhotos,
+        deliveryReceiverName.trim() || null,
+        deliveryReceiverDocumentId.trim() || null,
+      );
       setDeliveryDraftPhotos([]);
       setActiveStageCamera(null);
       Alert.alert("Entrega salva", "GPS, horario e fotos da entrega foram registrados.");
@@ -286,6 +312,18 @@ export const ChecklistDetailsScreen = ({
         <Text style={styles.cardTitle}>Etapa de coleta</Text>
         <Text style={styles.meta}>Hora: {checklist.pickup.timestampIso ?? "Nao capturado"}</Text>
         <Text style={styles.meta}>GPS: {formatCoordinates(checklist.pickup.coordinates)}</Text>
+        <LabeledTextInput
+          editable={!isPickupLocked}
+          label="Responsável - Nome"
+          onChangeText={setPickupReceiverName}
+          value={pickupReceiverName}
+        />
+        <LabeledTextInput
+          editable={!isPickupLocked}
+          label="Documento (CPF/RG)"
+          onChangeText={setPickupReceiverDocumentId}
+          value={pickupReceiverDocumentId}
+        />
         <SignatureCaptureField
           disabled={isPickupLocked}
           label="Assinatura coleta (opcional)"
@@ -303,6 +341,18 @@ export const ChecklistDetailsScreen = ({
         <Text style={styles.cardTitle}>Etapa de entrega</Text>
         <Text style={styles.meta}>Hora: {checklist.delivery.timestampIso ?? "Nao capturado"}</Text>
         <Text style={styles.meta}>GPS: {formatCoordinates(checklist.delivery.coordinates)}</Text>
+        <LabeledTextInput
+          editable={!isDeliveryLocked}
+          label="Responsável - Nome"
+          onChangeText={setDeliveryReceiverName}
+          value={deliveryReceiverName}
+        />
+        <LabeledTextInput
+          editable={!isDeliveryLocked}
+          label="Documento (CPF/RG)"
+          onChangeText={setDeliveryReceiverDocumentId}
+          value={deliveryReceiverDocumentId}
+        />
         <SignatureCaptureField
           disabled={isDeliveryLocked}
           label="Assinatura entrega (opcional)"

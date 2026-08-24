@@ -30,6 +30,10 @@ interface ChecklistRow {
   delivery_lat_long: string | null;
   pickup_timestamp: string | null;
   delivery_timestamp: string | null;
+  pickup_receiver_name: string | null;
+  pickup_receiver_document_id: string | null;
+  delivery_receiver_name: string | null;
+  delivery_receiver_document_id: string | null;
   photos: string;
   status: ChecklistStatus;
   created_at: string;
@@ -54,12 +58,16 @@ const INSERT_CHECKLIST_SQL = `
     delivery_lat_long,
     pickup_timestamp,
     delivery_timestamp,
+    pickup_receiver_name,
+    pickup_receiver_document_id,
+    delivery_receiver_name,
+    delivery_receiver_document_id,
     photos,
     status,
     created_at,
     updated_at
   )
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const parseCoordinates = (rawValue: string | null) => {
@@ -93,11 +101,15 @@ const toRecord = (row: ChecklistRow): ChecklistRecord => {
       signatureBase64: row.pickup_signature,
       coordinates: parseCoordinates(row.pickup_lat_long),
       timestampIso: row.pickup_timestamp,
+      receiverName: row.pickup_receiver_name ?? null,
+      receiverDocumentId: row.pickup_receiver_document_id ?? null,
     },
     delivery: {
       signatureBase64: row.delivery_signature,
       coordinates: parseCoordinates(row.delivery_lat_long),
       timestampIso: row.delivery_timestamp,
+      receiverName: row.delivery_receiver_name ?? null,
+      receiverDocumentId: row.delivery_receiver_document_id ?? null,
     },
     createdAtIso: row.created_at,
     updatedAtIso: row.updated_at,
@@ -147,6 +159,10 @@ const toChecklistInsertParams = (record: ChecklistRecord): Array<string | null> 
     serializeCoordinatesNullable(record.delivery.coordinates),
     record.pickup.timestampIso,
     record.delivery.timestampIso,
+    record.pickup.receiverName,
+    record.pickup.receiverDocumentId,
+    record.delivery.receiverName,
+    record.delivery.receiverDocumentId,
     JSON.stringify(record.photoPaths),
     record.status,
     record.createdAtIso,
@@ -200,8 +216,8 @@ export const checklistRepository = {
           notes: input.vehicle.notes,
         },
         photoPaths: [],
-        pickup: { signatureBase64: null, coordinates: null, timestampIso: null },
-        delivery: { signatureBase64: null, coordinates: null, timestampIso: null },
+        pickup: { signatureBase64: null, coordinates: null, timestampIso: null, receiverName: null, receiverDocumentId: null },
+        delivery: { signatureBase64: null, coordinates: null, timestampIso: null, receiverName: null, receiverDocumentId: null },
         createdAtIso: nowIso,
         updatedAtIso: nowIso,
       };
@@ -269,6 +285,8 @@ export const checklistRepository = {
             pickup_signature = ?,
             pickup_lat_long = ?,
             pickup_timestamp = ?,
+            pickup_receiver_name = ?,
+            pickup_receiver_document_id = ?,
             photos = ?,
             status = ?,
             updated_at = ?
@@ -278,6 +296,8 @@ export const checklistRepository = {
           input.signatureBase64,
           serializeCoordinatesNullable(input.coordinates),
           input.timestampIso,
+          input.receiverName,
+          input.receiverDocumentId,
           JSON.stringify(nextPhotos),
           "em_transito",
           buildNowIso(),
@@ -309,6 +329,8 @@ export const checklistRepository = {
             delivery_signature = ?,
             delivery_lat_long = ?,
             delivery_timestamp = ?,
+            delivery_receiver_name = ?,
+            delivery_receiver_document_id = ?,
             photos = ?,
             status = ?,
             updated_at = ?
@@ -318,6 +340,8 @@ export const checklistRepository = {
           input.signatureBase64,
           serializeCoordinatesNullable(input.coordinates),
           input.timestampIso,
+          input.receiverName,
+          input.receiverDocumentId,
           JSON.stringify(nextPhotos),
           "concluido",
           buildNowIso(),

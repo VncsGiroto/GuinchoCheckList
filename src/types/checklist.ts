@@ -9,6 +9,8 @@ export interface CheckpointMetadata {
   signatureBase64: string | null;
   coordinates: GeoPoint | null;
   timestampIso: string | null;
+  receiverName: string | null;
+  receiverDocumentId: string | null;
 }
 
 export interface VehicleData {
@@ -49,6 +51,8 @@ export interface SavePickupInput {
   coordinates: GeoPoint | null;
   timestampIso: string;
   photoPaths: string[];
+  receiverName: string | null;
+  receiverDocumentId: string | null;
 }
 
 export interface SaveDeliveryInput {
@@ -57,4 +61,6 @@ export interface SaveDeliveryInput {
   coordinates: GeoPoint | null;
   timestampIso: string;
   photoPaths: string[];
+  receiverName: string | null;
+  receiverDocumentId: string | null;
 }

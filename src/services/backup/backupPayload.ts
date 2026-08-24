@@ -18,10 +18,17 @@ const isCoordinates = (value: unknown): boolean => {
 const isCheckpoint = (value: unknown): boolean => {
   if (!isObject(value)) return false;
 
+  const hasNewFields = "receiverName" in value || "receiverDocumentId" in value;
+  const newFieldsValid = hasNewFields
+    ? isStringOrNull((value as Record<string, unknown>).receiverName) &&
+      isStringOrNull((value as Record<string, unknown>).receiverDocumentId)
+    : true;
+
   return (
     isStringOrNull(value.signatureBase64) &&
     isCoordinates(value.coordinates) &&
-    isStringOrNull(value.timestampIso)
+    isStringOrNull(value.timestampIso) &&
+    newFieldsValid
   );
 };
 

@@ -36,6 +36,8 @@ const resolvePhotoSrc = (photoPath: string, photoSrcMap: Record<string, string>)
   return photoSrcMap[photoPath] ?? photoPath;
 };
 
+const isFilled = (value: string | null | undefined): boolean => value != null && String(value).trim() !== "";
+
 const renderPhotosGrid = (photoPaths: string[], photoSrcMap: Record<string, string>): string => {
   if (photoPaths.length === 0) {
     return "<p>Sem fotos registradas.</p>";
@@ -139,10 +141,10 @@ export const buildChecklistHtml = (
       </div>
       <div>
         <p><strong>Prestador:</strong> ${providerSettings.providerName}</p>
-        <p><strong>Documento:</strong> ${providerSettings.providerDocumentId ?? "-"}</p>
-        <p><strong>Telefone:</strong> ${providerSettings.providerPhone ?? "-"}</p>
-        <p><strong>Email:</strong> ${providerSettings.providerEmail ?? "-"}</p>
-        <p><strong>Endereco:</strong> ${providerSettings.providerAddress ?? "-"}</p>
+        ${isFilled(providerSettings.providerDocumentId) ? `<p><strong>Documento:</strong> ${providerSettings.providerDocumentId}</p>` : ""}
+        ${isFilled(providerSettings.providerPhone) ? `<p><strong>Telefone:</strong> ${providerSettings.providerPhone}</p>` : ""}
+        ${isFilled(providerSettings.providerEmail) ? `<p><strong>Email:</strong> ${providerSettings.providerEmail}</p>` : ""}
+        ${isFilled(providerSettings.providerAddress) ? `<p><strong>Endereco:</strong> ${providerSettings.providerAddress}</p>` : ""}
         <p><strong>ID:</strong> ${checklist.id}</p>
       </div>
     </div>
@@ -150,8 +152,8 @@ export const buildChecklistHtml = (
     <h2>Cliente</h2>
     <table class="table">
       <tr><th>Nome</th><td>${checklist.customer.name}</td></tr>
-      <tr><th>Documento</th><td>${checklist.customer.documentId ?? "-"}</td></tr>
-      <tr><th>Telefone</th><td>${checklist.customer.phone ?? "-"}</td></tr>
+      ${isFilled(checklist.customer.documentId) ? `<tr><th>Documento</th><td>${checklist.customer.documentId}</td></tr>` : ""}
+      ${isFilled(checklist.customer.phone) ? `<tr><th>Telefone</th><td>${checklist.customer.phone}</td></tr>` : ""}
     </table>
 
     <h2>Veiculo</h2>
@@ -159,9 +161,9 @@ export const buildChecklistHtml = (
       <tr><th>Placa</th><td>${checklist.vehicle.plate}</td></tr>
       <tr><th>Marca</th><td>${checklist.vehicle.brand}</td></tr>
       <tr><th>Modelo</th><td>${checklist.vehicle.model}</td></tr>
-      <tr><th>Cor</th><td>${checklist.vehicle.color}</td></tr>
-      <tr><th>Ano</th><td>${checklist.vehicle.year}</td></tr>
-      <tr><th>Observacoes</th><td>${checklist.vehicle.notes ?? "-"}</td></tr>
+      ${isFilled(checklist.vehicle.color) ? `<tr><th>Cor</th><td>${checklist.vehicle.color}</td></tr>` : ""}
+      ${isFilled(checklist.vehicle.year) ? `<tr><th>Ano</th><td>${checklist.vehicle.year}</td></tr>` : ""}
+      ${isFilled(checklist.vehicle.notes) ? `<tr><th>Observacoes</th><td>${checklist.vehicle.notes}</td></tr>` : ""}
     </table>
 
     <h2>Fotos da Coleta</h2>
@@ -180,12 +182,16 @@ export const buildChecklistHtml = (
     <div class="signature-container">
       <div>
         <h3>Coleta</h3>
+        ${isFilled(checklist.pickup.receiverName) ? `<p><strong>Responsável - Nome:</strong> ${checklist.pickup.receiverName}</p>` : ""}
+        ${isFilled(checklist.pickup.receiverDocumentId) ? `<p><strong>Documento (CPF/RG):</strong> ${checklist.pickup.receiverDocumentId}</p>` : ""}
         ${renderSignature(checklist.pickup.signatureBase64)}
         <p><strong>GPS:</strong> ${renderCoordinates(checklist.pickup.coordinates?.latitude, checklist.pickup.coordinates?.longitude)}</p>
         <p><strong>Horario:</strong> ${checklist.pickup.timestampIso ?? "Nao capturado"}</p>
       </div>
       <div>
         <h3>Entrega</h3>
+        ${isFilled(checklist.delivery.receiverName) ? `<p><strong>Responsável - Nome:</strong> ${checklist.delivery.receiverName}</p>` : ""}
+        ${isFilled(checklist.delivery.receiverDocumentId) ? `<p><strong>Documento (CPF/RG):</strong> ${checklist.delivery.receiverDocumentId}</p>` : ""}
         ${renderSignature(checklist.delivery.signatureBase64)}
         <p><strong>GPS:</strong> ${renderCoordinates(checklist.delivery.coordinates?.latitude, checklist.delivery.coordinates?.longitude)}</p>
         <p><strong>Horario:</strong> ${checklist.delivery.timestampIso ?? "Nao capturado"}</p>

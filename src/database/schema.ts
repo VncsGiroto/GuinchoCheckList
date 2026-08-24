@@ -21,6 +21,10 @@ CREATE TABLE IF NOT EXISTS ${CHECKLIST_TABLE_NAME} (
   delivery_lat_long TEXT,
   pickup_timestamp TEXT,
   delivery_timestamp TEXT,
+  pickup_receiver_name TEXT,
+  pickup_receiver_document_id TEXT,
+  delivery_receiver_name TEXT,
+  delivery_receiver_document_id TEXT,
   photos TEXT NOT NULL DEFAULT '[]',
   status TEXT NOT NULL DEFAULT 'rascunho',
   created_at TEXT NOT NULL,
@@ -64,4 +68,15 @@ export const runMigrationsAsync = async (database: SQLiteDatabase): Promise<void
   await database.execAsync(createChecklistTableSql);
   await database.execAsync(createAppSettingsTableSql);
   await database.execAsync(seedAppSettingsSql);
+  const addColumns = [
+    "ALTER TABLE checklists ADD COLUMN pickup_receiver_name TEXT",
+    "ALTER TABLE checklists ADD COLUMN pickup_receiver_document_id TEXT",
+    "ALTER TABLE checklists ADD COLUMN delivery_receiver_name TEXT",
+    "ALTER TABLE checklists ADD COLUMN delivery_receiver_document_id TEXT",
+  ];
+  for (const sql of addColumns) {
+    try {
+      await database.execAsync(sql);
+    } catch {}
+  }
 };

@@ -1,0 +1,4 @@
+--Exportando backup loading
+--importando backup loading
+--configuracoes que nao foram preenchidas nao aparecer no checklist
+--adicionar campo na entrega e coleta de nome e documento de quem esta recebendo e entregando
