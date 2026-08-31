@@ -1,196 +1,19 @@
-import {
-  getDatabaseAsync,
-  initializeDatabaseAsync,
-  resetDatabaseConnectionAsync,
-} from "../client";
-import { isDatabaseNullPointerError } from "../databaseError";
+import { getDatabaseAsync } from "../client";
+import { executeWithDatabaseRecoveryAsync } from "../databaseRecovery";
 import { CHECKLIST_TABLE_NAME } from "../schema";
-import type {
-  ChecklistRecord,
-  ChecklistStatus,
-  CreateChecklistInput,
-  SaveDeliveryInput,
-  SavePickupInput,
-} from "../../types/checklist";
-
-interface ChecklistRow {
-  id: string;
-  customer_name: string;
-  customer_document_id: string | null;
-  customer_phone: string | null;
-  vehicle_plate: string;
-  vehicle_brand: string;
-  vehicle_model: string;
-  vehicle_color: string;
-  vehicle_year: string;
-  vehicle_notes: string | null;
-  pickup_signature: string | null;
-  delivery_signature: string | null;
-  pickup_lat_long: string | null;
-  delivery_lat_long: string | null;
-  pickup_timestamp: string | null;
-  delivery_timestamp: string | null;
-  pickup_receiver_name: string | null;
-  pickup_receiver_document_id: string | null;
-  delivery_receiver_name: string | null;
-  delivery_receiver_document_id: string | null;
-  photos: string;
-  status: ChecklistStatus;
-  created_at: string;
-  updated_at: string;
-}
-
-const INSERT_CHECKLIST_SQL = `
-  INSERT INTO ${CHECKLIST_TABLE_NAME} (
-    id,
-    customer_name,
-    customer_document_id,
-    customer_phone,
-    vehicle_plate,
-    vehicle_brand,
-    vehicle_model,
-    vehicle_color,
-    vehicle_year,
-    vehicle_notes,
-    pickup_signature,
-    delivery_signature,
-    pickup_lat_long,
-    delivery_lat_long,
-    pickup_timestamp,
-    delivery_timestamp,
-    pickup_receiver_name,
-    pickup_receiver_document_id,
-    delivery_receiver_name,
-    delivery_receiver_document_id,
-    photos,
-    status,
-    created_at,
-    updated_at
-  )
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`;
-
-const parseCoordinates = (rawValue: string | null) => {
-  if (!rawValue) {
-    return null;
-  }
-
-  const [latitude, longitude] = rawValue.split(",");
-  return { latitude: Number(latitude), longitude: Number(longitude) };
-};
-
-const toRecord = (row: ChecklistRow): ChecklistRecord => {
-  return {
-    id: row.id,
-    status: row.status,
-    customer: {
-      name: row.customer_name,
-      documentId: row.customer_document_id,
-      phone: row.customer_phone,
-    },
-    vehicle: {
-      plate: row.vehicle_plate,
-      brand: row.vehicle_brand,
-      model: row.vehicle_model,
-      color: row.vehicle_color,
-      year: row.vehicle_year,
-      notes: row.vehicle_notes,
-    },
-    photoPaths: JSON.parse(row.photos) as string[],
-    pickup: {
-      signatureBase64: row.pickup_signature,
-      coordinates: parseCoordinates(row.pickup_lat_long),
-      timestampIso: row.pickup_timestamp,
-      receiverName: row.pickup_receiver_name ?? null,
-      receiverDocumentId: row.pickup_receiver_document_id ?? null,
-    },
-    delivery: {
-      signatureBase64: row.delivery_signature,
-      coordinates: parseCoordinates(row.delivery_lat_long),
-      timestampIso: row.delivery_timestamp,
-      receiverName: row.delivery_receiver_name ?? null,
-      receiverDocumentId: row.delivery_receiver_document_id ?? null,
-    },
-    createdAtIso: row.created_at,
-    updatedAtIso: row.updated_at,
-  };
-};
-
-const serializeCoordinates = (latitude: number, longitude: number): string => {
-  return `${latitude},${longitude}`;
-};
-
-const serializeCoordinatesNullable = (
-  coordinates: { latitude: number; longitude: number } | null,
-): string | null => {
-  if (!coordinates) {
-    return null;
-  }
-
-  return serializeCoordinates(coordinates.latitude, coordinates.longitude);
-};
-
-const buildChecklistId = (): string => {
-  return `cl_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-};
-
-const buildNowIso = (): string => new Date().toISOString();
-
-const updatePhotoUnion = (currentPaths: string[], nextPaths: string[]): string[] => {
-  const merged = new Set<string>([...currentPaths, ...nextPaths]);
-  return [...merged];
-};
-
-const toChecklistInsertParams = (record: ChecklistRecord): Array<string | null> => {
-  return [
-    record.id,
-    record.customer.name,
-    record.customer.documentId,
-    record.customer.phone,
-    record.vehicle.plate,
-    record.vehicle.brand,
-    record.vehicle.model,
-    record.vehicle.color,
-    record.vehicle.year,
-    record.vehicle.notes,
-    record.pickup.signatureBase64,
-    record.delivery.signatureBase64,
-    serializeCoordinatesNullable(record.pickup.coordinates),
-    serializeCoordinatesNullable(record.delivery.coordinates),
-    record.pickup.timestampIso,
-    record.delivery.timestampIso,
-    record.pickup.receiverName,
-    record.pickup.receiverDocumentId,
-    record.delivery.receiverName,
-    record.delivery.receiverDocumentId,
-    JSON.stringify(record.photoPaths),
-    record.status,
-    record.createdAtIso,
-    record.updatedAtIso,
-  ];
-};
-
-const executeWithDatabaseRecoveryAsync = async <T>(
-  operation: () => Promise<T>,
-  operationName: string,
-): Promise<T> => {
-  try {
-    return await operation();
-  } catch (error) {
-    if (!isDatabaseNullPointerError(error)) {
-      throw new Error(`${operationName}: ${(error as Error).message}`);
-    }
-
-    await resetDatabaseConnectionAsync();
-    await initializeDatabaseAsync();
-
-    try {
-      return await operation();
-    } catch (retryError) {
-      throw new Error(`${operationName}: ${(retryError as Error).message}`);
-    }
-  }
-};
+import type { ChecklistRecord, CreateChecklistInput, SaveDeliveryInput, SavePickupInput } from "../../types/checklist";
+import {
+  assertDeliveryNotLocked,
+  assertPickupNotLocked,
+  buildChecklistId,
+  buildNowIso,
+  serializeCoordinatesNullable,
+  toChecklistInsertParams,
+  toRecord,
+  updatePhotoUnion,
+  type ChecklistRow,
+} from "./checklistMappers";
+import { INSERT_CHECKLIST_SQL, UPDATE_DELIVERY_SQL, UPDATE_PICKUP_SQL } from "./checklistSql";
 
 export const checklistRepository = {
   async create(input: CreateChecklistInput): Promise<ChecklistRecord> {
@@ -222,10 +45,7 @@ export const checklistRepository = {
         updatedAtIso: nowIso,
       };
 
-      await database.runAsync(
-        INSERT_CHECKLIST_SQL,
-        toChecklistInsertParams(draftRecord),
-      );
+      await database.runAsync(INSERT_CHECKLIST_SQL, toChecklistInsertParams(draftRecord));
 
       const created = await this.findById(checklistId);
       if (!created) {
@@ -268,42 +88,21 @@ export const checklistRepository = {
         throw new Error("Checklist does not exist.");
       }
 
-      if (
-        checklist.pickup.signatureBase64 ||
-        checklist.status === "em_transito" ||
-        checklist.status === "concluido"
-      ) {
-        throw new Error("Pickup stage is locked and cannot be edited.");
-      }
+      assertPickupNotLocked(checklist);
 
       const nextPhotos = updatePhotoUnion(checklist.photoPaths, input.photoPaths);
 
-      await database.runAsync(
-        `
-          UPDATE ${CHECKLIST_TABLE_NAME}
-          SET
-            pickup_signature = ?,
-            pickup_lat_long = ?,
-            pickup_timestamp = ?,
-            pickup_receiver_name = ?,
-            pickup_receiver_document_id = ?,
-            photos = ?,
-            status = ?,
-            updated_at = ?
-          WHERE id = ?
-        `,
-        [
-          input.signatureBase64,
-          serializeCoordinatesNullable(input.coordinates),
-          input.timestampIso,
-          input.receiverName,
-          input.receiverDocumentId,
-          JSON.stringify(nextPhotos),
-          "em_transito",
-          buildNowIso(),
-          input.checklistId,
-        ],
-      );
+      await database.runAsync(UPDATE_PICKUP_SQL, [
+        input.signatureBase64,
+        serializeCoordinatesNullable(input.coordinates),
+        input.timestampIso,
+        input.receiverName,
+        input.receiverDocumentId,
+        JSON.stringify(nextPhotos),
+        "em_transito",
+        buildNowIso(),
+        input.checklistId,
+      ]);
     }, "Failed to save pickup stage");
   },
 
@@ -316,38 +115,21 @@ export const checklistRepository = {
         throw new Error("Checklist does not exist.");
       }
 
-      if (checklist.status === "concluido") {
-        throw new Error("Delivery stage is locked and cannot be edited.");
-      }
+      assertDeliveryNotLocked(checklist);
 
       const nextPhotos = updatePhotoUnion(checklist.photoPaths, input.photoPaths);
 
-      await database.runAsync(
-        `
-          UPDATE ${CHECKLIST_TABLE_NAME}
-          SET
-            delivery_signature = ?,
-            delivery_lat_long = ?,
-            delivery_timestamp = ?,
-            delivery_receiver_name = ?,
-            delivery_receiver_document_id = ?,
-            photos = ?,
-            status = ?,
-            updated_at = ?
-          WHERE id = ?
-        `,
-        [
-          input.signatureBase64,
-          serializeCoordinatesNullable(input.coordinates),
-          input.timestampIso,
-          input.receiverName,
-          input.receiverDocumentId,
-          JSON.stringify(nextPhotos),
-          "concluido",
-          buildNowIso(),
-          input.checklistId,
-        ],
-      );
+      await database.runAsync(UPDATE_DELIVERY_SQL, [
+        input.signatureBase64,
+        serializeCoordinatesNullable(input.coordinates),
+        input.timestampIso,
+        input.receiverName,
+        input.receiverDocumentId,
+        JSON.stringify(nextPhotos),
+        "concluido",
+        buildNowIso(),
+        input.checklistId,
+      ]);
     }, "Failed to save delivery stage");
   },
 

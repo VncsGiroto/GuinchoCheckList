@@ -7,7 +7,11 @@ interface PrimaryButtonProps {
   disabled?: boolean;
 }
 
-export const PrimaryButton = ({ label, onPress, disabled = false }: PrimaryButtonProps) => {
+export const PrimaryButton = ({
+  label,
+  onPress,
+  disabled = false,
+}: PrimaryButtonProps) => {
   return (
     <Pressable
       accessibilityRole="button"
@@ -45,4 +49,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

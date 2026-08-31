@@ -28,7 +28,11 @@ export const LabeledTextInput = ({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#8A8A8A"
-        style={[styles.input, multiline ? styles.multiline : undefined, !editable ? styles.readOnly : undefined]}
+        style={[
+          styles.input,
+          multiline ? styles.multiline : undefined,
+          !editable ? styles.readOnly : undefined,
+        ]}
         value={value}
       />
     </View>
@@ -63,4 +67,3 @@ const styles = StyleSheet.create({
     backgroundColor: "#EFEFEF",
   },
 });
-

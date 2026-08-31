@@ -1,4 +1,5 @@
 import { getDatabaseAsync } from "../client";
+import { executeWithDatabaseRecoveryAsync } from "../databaseRecovery";
 import { APP_SETTINGS_TABLE_NAME } from "../schema";
 import type { ProviderSettings, UpdateProviderSettingsInput } from "../../types/settings";
 
@@ -27,19 +28,21 @@ const normalizeOptional = (value: string): string | null => {
 
 export const settingsRepository = {
   async getProviderSettings(): Promise<ProviderSettings> {
-    const database = await getDatabaseAsync();
-    const row = await database.getFirstAsync<ProviderSettingsRow>(
-      `SELECT provider_name, provider_document_id, provider_phone, provider_email, provider_address, updated_at
-       FROM ${APP_SETTINGS_TABLE_NAME}
-       WHERE id = 'default'
-       LIMIT 1`,
-    );
+    return executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
+      const row = await database.getFirstAsync<ProviderSettingsRow>(
+        `SELECT provider_name, provider_document_id, provider_phone, provider_email, provider_address, updated_at
+         FROM ${APP_SETTINGS_TABLE_NAME}
+         WHERE id = 'default'
+         LIMIT 1`,
+      );
 
-    if (!row) {
-      throw new Error("Configuracoes da empresa nao encontradas.");
-    }
+      if (!row) {
+        throw new Error("Configuracoes da empresa nao encontradas.");
+      }
 
-    return toSettings(row);
+      return toSettings(row);
+    }, "Failed to fetch provider settings");
   },
 
   async updateProviderSettings(input: UpdateProviderSettingsInput): Promise<void> {
@@ -48,20 +51,22 @@ export const settingsRepository = {
       throw new Error("Nome da empresa e obrigatorio.");
     }
 
-    const database = await getDatabaseAsync();
-    await database.runAsync(
-      `UPDATE ${APP_SETTINGS_TABLE_NAME}
-       SET provider_name = ?, provider_document_id = ?, provider_phone = ?, provider_email = ?, provider_address = ?, updated_at = ?
-       WHERE id = 'default'`,
-      [
-        providerName,
-        normalizeOptional(input.providerDocumentId ?? ""),
-        normalizeOptional(input.providerPhone ?? ""),
-        normalizeOptional(input.providerEmail ?? ""),
-        normalizeOptional(input.providerAddress ?? ""),
-        new Date().toISOString(),
-      ],
-    );
+    return executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
+      await database.runAsync(
+        `UPDATE ${APP_SETTINGS_TABLE_NAME}
+         SET provider_name = ?, provider_document_id = ?, provider_phone = ?, provider_email = ?, provider_address = ?, updated_at = ?
+         WHERE id = 'default'`,
+        [
+          providerName,
+          normalizeOptional(input.providerDocumentId ?? ""),
+          normalizeOptional(input.providerPhone ?? ""),
+          normalizeOptional(input.providerEmail ?? ""),
+          normalizeOptional(input.providerAddress ?? ""),
+          new Date().toISOString(),
+        ],
+      );
+    }, "Failed to update provider settings");
   },
 
   async replaceProviderSettings(input: UpdateProviderSettingsInput): Promise<void> {
@@ -70,32 +75,34 @@ export const settingsRepository = {
       throw new Error("Nome da empresa e obrigatorio.");
     }
 
-    const database = await getDatabaseAsync();
-    await database.runAsync(
-      `INSERT INTO ${APP_SETTINGS_TABLE_NAME} (
-         id,
-         provider_name,
-         provider_document_id,
-         provider_phone,
-         provider_email,
-         provider_address,
-         updated_at
-       ) VALUES ('default', ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         provider_name = excluded.provider_name,
-         provider_document_id = excluded.provider_document_id,
-         provider_phone = excluded.provider_phone,
-         provider_email = excluded.provider_email,
-         provider_address = excluded.provider_address,
-         updated_at = excluded.updated_at`,
-      [
-        providerName,
-        normalizeOptional(input.providerDocumentId ?? ""),
-        normalizeOptional(input.providerPhone ?? ""),
-        normalizeOptional(input.providerEmail ?? ""),
-        normalizeOptional(input.providerAddress ?? ""),
-        new Date().toISOString(),
-      ],
-    );
+    return executeWithDatabaseRecoveryAsync(async () => {
+      const database = await getDatabaseAsync();
+      await database.runAsync(
+        `INSERT INTO ${APP_SETTINGS_TABLE_NAME} (
+           id,
+           provider_name,
+           provider_document_id,
+           provider_phone,
+           provider_email,
+           provider_address,
+           updated_at
+         ) VALUES ('default', ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           provider_name = excluded.provider_name,
+           provider_document_id = excluded.provider_document_id,
+           provider_phone = excluded.provider_phone,
+           provider_email = excluded.provider_email,
+           provider_address = excluded.provider_address,
+           updated_at = excluded.updated_at`,
+        [
+          providerName,
+          normalizeOptional(input.providerDocumentId ?? ""),
+          normalizeOptional(input.providerPhone ?? ""),
+          normalizeOptional(input.providerEmail ?? ""),
+          normalizeOptional(input.providerAddress ?? ""),
+          new Date().toISOString(),
+        ],
+      );
+    }, "Failed to replace provider settings");
   },
 };

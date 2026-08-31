@@ -45,14 +45,16 @@ src/
 
 ## Requisitos
 
-- Node.js 20+
-- Corepack habilitado
+- Node.js 22.13+ (recomendado 22.14.0 via `fnm` — ver `.nvmrc`/`.node-version`)
+- Corepack habilitado (`corepack enable`)
+- pnpm 9.15.9+ (`packageManager` em `package.json`)
 - Android Studio (para emulador e builds nativas locais)
 - Conta Expo/EAS para build na nuvem
 
 ## Execucao local
 
 ```bash
+fnm use --install-if-missing  # lê .nvmrc (22.14.0) — alternativa: nvm use / volta pin
 corepack pnpm install
 corepack pnpm run typecheck
 corepack pnpm run test
